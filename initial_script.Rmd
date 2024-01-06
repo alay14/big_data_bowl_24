@@ -1,0 +1,2446 @@
+---
+title: "2024 Big Data Bowl"
+output: html_notebook
+---
+
+``` {r setup, include = FALSE} 
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(janitor)
+library(mgcv)
+library(fitdistrplus)
+library(tweedie)
+library(statmod)
+library(itsadug)
+
+```
+
+``` {r}
+# Loading in the data
+
+games <- read.csv("games.csv")
+players <- read.csv("players.csv") %>% clean_names() %>%
+  dplyr::mutate(ft = str_split_i(height,"-",1) %>% as.numeric(),
+                inch = str_split_i(height,"-",2) %>% as.numeric(),
+                height_in = ft*12+inch
+                )
+plays <- read.csv("plays.csv") 
+tackles <- read.csv("tackles.csv") 
+
+# Loading in the first week of tracking data to play around with
+track1 <- read.csv("tracking_week_6.csv") %>% clean_names()
+
+# Use dir instead of o to reference player motion
+```
+
+What event words are the key words that should be used when determining different factors
+
+``` {r}
+track1 %>% pull(event) %>% unique()
+# first_contact , tackle, qb_slide , touchdown, qb_sack , fumble - end 
+# run, handoff, lateral, snap_direct, pass_arrived, pass_outcome_caught - start
+start_triggers <- c("run", "handoff", "lateral", "snap_direct", "pass_arrived", "pass_outcome_caught")
+end_triggers <- c("first_contact" , "tackle", "qb_slide" , "touchdown", "qb_sack" , "fumble","out_of_bounds")
+```
+Keep only tackle and first contact for validation set. 
+
+
+### Yards Saved Metric and Why It Matters
+
+The metric we've chosen to create for this project is a yards saved metric. As it currently stands, yards saved can only be calculated on plays where there is a missed tackle. These are the plays to investigate to see how prevalent and how big of an impact yards saved has on the game of football. 
+
+``` {r}
+
+num_plays_w_tackle <- tackles %>% dplyr::group_by(gameId,playId) %>%
+  summarise(missed_tackle_binomial = ifelse(sum(pff_missedTackle, na.rm = TRUE)> 0,1,0)) %>%
+  ungroup() %>% nrow()
+
+missed_tackles <- tackles %>% filter(pff_missedTackle == 1)
+
+num_plays_w_missed_tackle <- missed_tackles %>% distinct(gameId,playId) %>% nrow()
+
+num_plays_w_missed_tackle / num_plays_w_tackle
+
+```
+
+Missed tackles only occurred on 15% of the plays with a tackle involved. 
+
+``` {r}
+# track1 %>% inner_join(missed_tackles, by = c("game_id" = "gameId","play_id" = "playId", "nfl_id" = "nflId")) %>% head(20)
+
+
+missed_tackle_yards <- function(week) {
+  # read in
+  trackfile <- paste0("tracking_week_",week,".csv")
+  track1 <- read_csv(trackfile) %>% clean_names()
+  
+  # only plays with missed tackles
+  track_mt <- track1 %>% inner_join(missed_tackles, by = c("game_id" = "gameId","play_id" = "playId"))
+  # only the ball carrier for those plays
+  allcar <- track_mt %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "ballCarrierId")) %>%
+        setNames(paste0("car_",names(.))) 
+  
+  # start indicated at first contact
+  # end indicated with the end tags: tackle, touchdown, oob
+  
+  mtsum <- allcar %>%
+    dplyr::group_by(car_game_id,car_play_id) %>%
+    dplyr::summarise(start_frame = pick(car_event,car_frame_id) %>% filter(car_event == "first_contact") %>% 
+                      pull(car_frame_id) %>% min(),
+                    end_frame = pick(car_event,car_frame_id) %>% 
+                      filter(car_event %in% c("tackle","qb_slide","touchdown",
+                                          "qb_sack","fumble","out_of_bounds")) %>%
+                      pull(car_frame_id) %>% min(),
+                    start_x = pick(car_event,car_x) %>% filter(car_event == "first_contact") %>% 
+                      pull(car_x) %>% min(),
+                    end_x = pick(car_event,car_x) %>% 
+                      filter(car_event %in% c("tackle","qb_slide","touchdown",
+                                          "qb_sack","fumble","out_of_bounds")) %>%
+                      pull(car_x) %>% min(),
+                    diff = abs(end_x - start_x)
+                  )
+  
+  
+  return(mtsum)
+
+}
+
+mt_summary <- 1:9 %>% map_dfr(missed_tackle_yards)
+
+
+# Taking the difference between first contact and tackle as the yards gained lost for a missed tackle
+```
+
+Now we have every missed tackle and the difference in yards between the tackle occuring and the first contact. We can analyze the distribution to understand the affect of this better.
+
+``` {r}
+mt_summary %>% filter(diff == Inf) %>% nrow() ### errant tagged plays
+
+track1 %>% inner_join(mt_summary %>% filter(diff == Inf), by = c("game_id" = "car_game_id","play_id" = "car_play_id")) %>% View()
+# maybe investigate why there is an infinite difference
+# those plays don't have a first contact variable, can't assign value to missed yards
+
+mt_summary <- mt_summary %>% filter(diff < Inf)
+
+mt_summary %>%
+  ggplot(aes(x = diff)) + geom_density()
+
+mt_summary %>% pull(diff) %>% summary() # Distribution of the yards gained after missed tackles
+
+total_missed_tackle_yds <- mt_summary %>% pull(diff) %>% sum() # Total yards from missed tackles 
+
+total_yards <- plays %>% inner_join(tackles) %>% distinct(gameId,playId, .keep_all = TRUE) %>%
+  pull(playResult) %>% sum()
+
+# Percentage of all yards coming from missed tackles
+total_missed_tackle_yds / total_yards
+
+```
+
+On plays with a missed tackle, average of 7.7 yards and median of 5.5 yards were gained after the missed tackle. Total of 13,104 yards occurred after missed tackles. Also, for plays where a tackle was made, 15.5%  of the total yards came after a missed tackle. This is a significant amount of yards that resulted from missed tackles. Definitely something that should be accounted for. 
+
+Which teams gave up the most missed tackles and most yards from missed tackles?
+
+``` {r}
+mt_summary %>% 
+  left_join(plays, by = c("car_game_id" = "gameId","car_play_id" = "playId")) %>%
+  dplyr::group_by(defensiveTeam) %>%
+  dplyr::summarise(yds_from_missed_tackles = sum(diff, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = reorder(defensiveTeam,desc(yds_from_missed_tackles)), y = yds_from_missed_tackles)) +
+  geom_bar(stat = "identity")
+# bring in nflverse plotting info to add logos and colors to this plot
+
+```
+
+### Looking at plays where we know a tackle happens
+
+Subset only plays where a tackle happens. Remove the tackler happens and see where the next individual would make the tackle if the tackler didn't make it.
+
+For a play, calculate distance between defender and ball carrier. Evaluate change in distance between the two as a way to approximate the tackle.
+
+``` {r}
+# play 8646 matches up with the first one in tracking data
+row_n <- 2571
+# could eventually find functionality to find which week the play was in and load the subsequent tracking data
+play_dist_calc <- function(row_n){
+  pl_game_id <- plays$gameId[row_n]
+  pl_play_id <- plays$playId[row_n]
+  pl_carrier_id <- plays$ballCarrierId[row_n]
+  pl_pos_team <- plays$possessionTeam[row_n]
+  
+  # need the ids of everyone involved in tackles or missed tackles to exclude
+  tackle_involved_id <- tackles %>% filter(gameId == pl_game_id, playId == pl_play_id) %>%
+    pull(nflId)
+  
+  # separate out the ball and the people
+  balltrack <- track1 %>%
+    filter(display_name == "football", game_id == pl_game_id, play_id == pl_play_id) 
+  
+  starting_frame <- balltrack %>% filter(event %in% start_triggers) %>% pull(frame_id) %>% min()
+  ending_frame <- balltrack %>% filter(event %in% end_triggers) %>% pull(frame_id) %>% min()
+  
+  # for the people, just want ball carrier on offense and everyone NOT involved in the tackle on defense
+    carriertrack <- track1 %>%
+      filter(display_name != "football",game_id == pl_game_id, play_id == pl_play_id,
+           nfl_id == pl_carrier_id,
+           frame_id >= starting_frame, frame_id <= ending_frame) %>%
+      setNames(paste0("car_",names(.))) 
+    
+    defensetrack <- track1 %>% 
+      filter(display_name != "football",game_id == pl_game_id, play_id == pl_play_id, 
+             (club != pl_pos_team & !(nfl_id %in% tackle_involved_id)),
+             frame_id >= starting_frame, frame_id <= ending_frame)
+    
+    # join the defense and offensive dfs for easy calculations between defender and carrier
+    
+    defensetrack %>% 
+      left_join(carriertrack, by = c("frame_id" = "car_frame_id")) %>%
+      dplyr::mutate(dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                    closing_vel = (dist_to_car - lag(dist_to_car, default = 0))*10,
+                    closing_acc = closing_vel - lag(closing_vel, default = 0),
+                    t_to_close = -2*closing_vel / closing_acc,
+                    timer = frame_id - min(frame_id)
+                    ) %>%
+      #filter(frame_id == ending_frame) %>% 
+      filter(display_name == "Michael Carter") %>%
+      ggplot(aes(x = timer, y = dist_to_car)) +
+      geom_point() +
+      geom_line() +
+      #geom_smooth(method = "gam", color = "red") +
+      geom_smooth(method = "lm",formula = y ~ poly(x,2, raw = TRUE))
+    
+    
+ player_mod_coef <- function(player_data) {
+     mod <- lm(dist_to_car ~ poly(timer,3,raw = TRUE), data = player_data)
+     return(mod$coefficients %>% as.character() %>% paste(., collapse = " "))
+   
+ }   
+ 
+ poly_find_zero <- function(player_data) {
+  mod <- lm(dist_to_car ~ poly(timer,3,raw = TRUE), data = player_data)
+  summary(mod)
+  
+
+  
+  solvepoly <- function (poly, y) {
+  poly[1] <- poly[1] - y
+  ## all roots, including complex ones
+  roots <- polyroot(poly)
+  ## keep real roots
+  Re(roots)[abs(Im(roots)) / Mod(roots) < 1e-10]
+  }
+  aa <- solvepoly(coef(mod),0)
+  
+  return(aa[aa > 0][1])
+  
+   
+   
+ }
+    
+    
+  ex <- defensetrack %>% 
+      left_join(carriertrack, by = c("frame_id" = "car_frame_id")) %>%
+      dplyr::mutate(dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                    timer = frame_id - min(frame_id),
+                    closing_vel = (dist_to_car - lag(dist_to_car, default = 0))*10,
+                    closing_acc = closing_vel - lag(closing_vel, default = 0)
+                    ) %>%
+    dplyr::group_by(display_name) %>%
+    dplyr::mutate(model = player_mod_coef(pick(timer,dist_to_car)),
+                  frames_to_collision = poly_find_zero(pick(timer,dist_to_car)),
+                  next_collision_frame = (frames_to_collision - max(timer))
+    )
+  
+    
+    mod1 <- lm(dist_to_car ~ poly(timer,1,raw = TRUE), data = ex %>% filter(display_name == "C.J. Mosley"))
+  summary(mod1)
+    mod2 <- lm(dist_to_car ~ poly(timer,2,raw = TRUE), data = ex %>% filter(display_name == "C.J. Mosley"))
+  summary(mod2)
+    mod3 <- lm(dist_to_car ~ poly(timer,3,raw = TRUE), data = ex %>% filter(display_name == "C.J. Mosley"))
+  summary(mod3)
+    mod4 <- lm(dist_to_car ~ poly(timer,4,raw = TRUE), data = ex %>% filter(display_name == "C.J. Mosley"))
+  summary(mod4)
+
+  
+  rg <- c(0:100)
+  ggplot() +
+    geom_line(aes(x = rg, y = predict(mod1, data.frame(timer = rg))), color = "blue") +
+    geom_line(aes(x = rg, y = predict(mod2, data.frame(timer = rg))), color = "green") +
+    geom_line(aes(x = rg, y = predict(mod3, data.frame(timer = rg))), color = "yellow") +
+    geom_line(aes(x = rg, y = predict(mod4, data.frame(timer = rg))), color = "red") +
+    ylim(c(-100,100))
+
+  mod <- lm(dist_to_car ~ poly(timer,2,raw = TRUE), data = ex %>% filter(display_name == "C.J. Mosley"))
+  summary(mod)
+  
+
+  
+
+  ### redo the calculation here testing out the  
+ player_mod_coef <- function(player_data) {
+     mod <- lm(dist_to_car ~ poly(timer,2,raw = TRUE), data = player_data)
+     return(mod$coefficients %>% as.character() %>% paste(., collapse = " "))
+   
+ }   
+ 
+ poly_find_zero <- function(player_data) {
+  mod <- lm(dist_to_car ~ poly(timer,2,raw = TRUE), data = player_data)
+  summary(mod)
+  
+
+  
+  solvepoly <- function (poly, y) {
+  poly[1] <- poly[1] - y
+  ## all roots, including complex ones
+  roots <- polyroot(poly)
+  ## keep real roots
+  Re(roots)[abs(Im(roots)) / Mod(roots) < 1e-10]
+  }
+  aa <- solvepoly(coef(mod),0)
+  
+  return(aa[aa > 0][1])
+  
+   
+   
+ }
+    
+    
+  ex <- defensetrack %>% 
+      left_join(carriertrack, by = c("frame_id" = "car_frame_id")) %>%
+      dplyr::mutate(dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                    timer = frame_id - min(frame_id),
+                    )
+  
+  oth_defenders <- ex %>% pull(display_name) %>% unique()
+
+  
+  optimal_poly <- function(pl_row) {
+    this_person <- oth_defenders[pl_row]
+    
+    players_data <- ex %>% 
+      filter(display_name == this_person)
+    
+    mod1 <- lm(dist_to_car ~ poly(timer,1,raw = TRUE), data = players_data)
+    s1 <- sigma(mod1)
+    mod2 <- lm(dist_to_car ~ poly(timer,2,raw = TRUE), data = players_data)
+    s2 <- sigma(mod2)
+    mod3 <- lm(dist_to_car ~ poly(timer,3,raw = TRUE), data = players_data)
+    s3 <- sigma(mod3)
+    mod4 <- lm(dist_to_car ~ poly(timer,4,raw = TRUE), data = players_data)
+    s4 <- sigma(mod4)
+    
+    min_resid_se <- min(c(s1,s2,s3,s4),na.rm =  TRUE)
+    
+    if (s1 == min_resid_se) {
+      poly_term <- 1
+    } else if(s2 == min_resid_se) {
+      poly_term <- 2
+    } else if(s3 == min_resid_se) {
+      poly_term <- 3
+    } else {
+      poly_term <- 4
+    }
+    
+    best <- get(paste0("mod",poly_term))
+    coefs <- best %>% as.list()
+    #coefs <- best$coefficients %>% round(., 3) %>% as.character() %>% paste(., collapse = " ")
+    
+    solvepoly <- function (poly, y) {
+      poly[1] <- poly[1] - y
+      ## all roots, including complex ones
+      roots <- polyroot(poly)
+      ## keep real roots
+      Re(roots)[abs(Im(roots)) / Mod(roots) < 1e-10]
+    }
+    mod_zero <- solvepoly(coef(best),0) %>% round(.,3)
+  
+    solution <- mod_zero[mod_zero > 0][1]
+    
+    sol_df <- tibble(
+      display_name = this_person,
+      opt_poly = poly_term,
+      model = coefs,
+      frames_to_collision = solution
+    )
+   
+   
+  }
+  
+  optimal_poly_df <- 1:length(oth_defenders) %>% map_dfr(optimal_poly)
+
+  
+  
+  
+    
+  }
+  
+  
+    
+  
+    ggplot(tibble(x = seq(0,70,1), y = predict(mod, data.frame(timer = seq(0,70,1)))),
+         aes(x = x,y = y)) +
+    geom_line()
+  
+}
+
+# Calculating the position of the carrier with the theoretical Frame of next collision 
+
+hyp_col_frame <- ex$next_collision_frame %>% min(., na.rm = TRUE)
+
+ poly_find_position <- function(player_data,x_or_y) {
+  mod <- lm(get(x_or_y) ~ poly(timer,3,raw = TRUE), data = player_data)
+  summary(mod)
+  return(predict(mod, data.frame(timer = hyp_col_frame)))
+  
+  
+ }
+ 
+ ggplot(ex %>% filter(timer == 4),) +
+   geom_point( aes(x = x, y = y, color = display_name)) +
+   geom_point(aes(x = car_x, y = car_y), color = "black") +
+   ggrepel::geom_text_repel(aes(x = x, y = y,label = display_name))
+
+```
+Potential use of a gam model instead of polynomial regression models. 
+
+
+Need to think about the nuance of the calculations with the limitations of the field, if someone is angling to run out of bounds, will the closing calculations not be able to finalize? Or we just dont calculate for that
+Can we apply limits to the polynomial functions where the player would be running out of bounds to ensure calculations are correct?
+
+
+How to project the position that the running back will be in given the frame of next intersection
+
+
+Validation set would include only tackles and first contact. No OOB, touchdowns, sacks etc. At least 20 frames.
+For testing take first half of the frames, project the tackle frame and location. Get rid of penalty plays
+
+Think about blockers and if accommodations need to be made to account for them.
+
+### Getting the average duration between catch/handoff and tackle
+
+``` {r}
+# Create a loop that takes a week of tracking data
+# groups all the plays
+# returns a data frame with the play id and the time between start and end triggers
+# use the ball for only one set of tracking data per play
+tr_files <- list.files()[grepl("tracking",list.files())]
+
+carry_duration <- function(row_n) {
+  
+  
+    bbbb <- read.csv(tr_files[row_n]) %>%
+      clean_names() %>%
+      filter(display_name == "football") %>%
+      dplyr::mutate(starts  = ifelse(event %in% start_triggers, "start",NA),
+                ends = ifelse(event %in% end_triggers, "end",NA),
+                cap_frames = ifelse(starts == "start" | ends == "end", frame_id,NA)) %>%
+      dplyr::group_by(game_id,play_id) %>%
+      dplyr::summarise(duration = max(cap_frames, na.rm = TRUE) - min(cap_frames, na.rm = TRUE)) %>% 
+      ungroup()
+  return(bbbb)
+}
+
+play_carry_duration <- 1:length(tr_files) %>% map_dfr(carry_duration)
+
+ggplot(play_carry_duration, aes(x = duration / 10)) + geom_density()
+
+play_carry_duration %>% pull(duration) %>% summary()
+```
+
+Average time with the ball is 2.7 seconds, to model the tackles with polynomials we will build the validation set with carries of at least 2 seconds (~25th percentile). This will assure that there is adequate data to model the trajectory of the distance between players. 
+
+Filtering the dataset of plays to meet all the conditions for testing
+
+``` {r}
+long_runs <- play_carry_duration %>% filter(duration > 20)
+
+# note 1809 plays result in out of bounds
+
+play_testing_set <- inner_join(plays,long_runs, by = c("gameId" = "game_id","playId" = "play_id")) %>%
+  filter(preSnapHomeTeamWinProbability > 0.1, preSnapHomeTeamWinProbability < 0.99,
+         !grepl("sack",playDescription,ignore.case = TRUE),
+         !grepl("touchdown",playDescription,ignore.case = TRUE),
+         !grepl("ob ",playDescription,ignore.case = TRUE))
+```
+
+Could also model missed tackles and where the next tackle actually occurred. Very similar to what we are trying to predict.
+
+
+If I only took the first half of the points to fit a model for when the tackle will fit happen does this bias toward certain results? What is the best way to set up the testing procedure for when the tackle will happen? Instead of using half the points we need to determine a set amount of time to use to be able to accurately project. Can we model with a cubic gam with an increasing number of frames and determine what is optimal? The more point we use the more accurate the prediction will get, however the later the predictions will be, decreasing the efficacy of the modeling. Looking for a tradeoff between the number of frames required to make a prediction and the accuracy of the prediction.
+
+
+
+
+
+Different approach, first off modeling with cubic spline gam instead of polynomial regression to add more penalization for extreme polynomial terms, fixing the issue with conconverging and very large solutions. While maintaing physics principals of 3rd degree plynomial to explain the displacement. As far as the data goes, taking only the tacklers on the play, distance from the defender and fitting one big model to understand the displacement as the tackler approaches the ball carrier and the distance converges to zero.
+
+Get all the tackler data into one dataframe, and all the carrier data into another. Join together by play, calculate distances between and go from there. Adding in features to calculate if there is anyone who is in between the player and the carrier. With a one yard cushion around the line on both sides. 
+
+Would it be better when modeling to flip the axes and the prediction, instead of using the timer to predict the distance, should the model use the distances to predict the time when the tackle will happen? Distance, velocity, acceleration, and change in acceleration as inputs into a cubic spline gam model to predict when the collision will occur
+
+``` {r, echo = FALSE}
+# no assisted tackles, no missed tackles, just solo clean tackle
+clean_tackles <- tackles %>%
+  filter(tackle == 1, assist == 0, pff_missedTackle == 0)
+
+car_tack_pairs_each_week <- function(week) {
+  trackfile <- paste0("tracking_week_",week,".csv")
+  track1 <- read_csv(trackfile) %>% clean_names()
+  
+  alltack <- track1 %>% 
+    inner_join(clean_tackles,
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "nflId")) %>%
+    inner_join(players %>% dplyr::select(nfl_id, height_in,weight))
+  
+  allcar <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "ballCarrierId")) %>%
+        setNames(paste0("car_",names(.))) 
+  
+  alloff <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,possessionTeam,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","club" = "possessionTeam")) %>%
+    filter(nfl_id != ballCarrierId) %>%
+        setNames(paste0("off_",names(.))) 
+  
+  count_off_between <- function(game,play,frame,tack_x,tack_y,bc_x,bc_y) {
+    m = (tack_y - bc_y) / (tack_x - bc_x)
+    int = bc_y - m*bc_x
+    l_int = int - 1
+    u_int = int + 1
+    
+    pl_between_df <- alloff %>% 
+      filter(off_game_id == game, off_play_id == play, off_frame_id == frame) %>%
+      dplyr::mutate(calc_upper_y = m*off_x+u_int,
+                    calc_lower_y = m*off_x+l_int) %>%
+      filter(off_y <= calc_upper_y, off_y >= calc_lower_y)
+    
+    return(nrow(pl_between_df))
+      
+      # return the length of the data frame representing the number of people in between
+  }
+  
+  closest_off_pl_dist <- function(game,play,frame,bc_x,bc_y) {
+    clos <- alloff %>% 
+      filter(off_game_id == game, off_play_id == play, off_frame_id == frame) %>%
+      dplyr::mutate(dist_to_off = sqrt(((off_x-bc_x)^2) +  ((off_y-bc_y)^2))) %>%
+      pull(dist_to_off) %>%
+      min(., na.rm = TRUE)
+    
+    return(clos)
+  }
+  
+  pair <- inner_join(allcar,alltack, 
+                                by = c("car_game_id" = "game_id",
+                                       "car_play_id" = "play_id",
+                                       "car_frame_id" = "frame_id")) %>%
+    inner_join(play_testing_set %>% dplyr::select(gameId,playId),
+               by = c("car_game_id" = "gameId", "car_play_id" = "playId")) %>%
+    dplyr::group_by(car_game_id,car_play_id) %>%
+    dplyr::mutate(start = pick(event,car_frame_id) %>% filter(event %in% start_triggers) %>% 
+                    pull(car_frame_id) %>% min(),
+                  end = pick(event,car_frame_id) %>% filter(event %in% end_triggers) %>% 
+                    pull(car_frame_id) %>% min(),
+                  dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                  vel_to_car = dist_to_car - lag(dist_to_car), # in meters per hz
+                  acc_to_car = vel_to_car - lag(vel_to_car), # in meters per hz^2
+                  jerk_to_car = acc_to_car - lag(acc_to_car), # in meters per hz^3
+                  rel_velo = s - car_s,
+                  start_dist = pick(start,dist_to_car) %>% filter(car_frame_id == start) %>% pull(dist_to_car),
+                  timer = car_frame_id - start,
+                  time_to_col = end - car_frame_id,
+                  start_frame = ifelse(timer == 0,TRUE,FALSE),
+                  unq_play_id = paste0(car_game_id,"-",car_play_id)
+                  ) %>%
+    ungroup() %>%
+    filter(car_frame_id >= start, car_frame_id <= end) %>%
+    rowwise() %>%
+    dplyr::mutate(off_pl_btw = count_off_between(car_game_id, car_play_id,car_frame_id,x,y,car_x,car_y),
+                  min_off_dist = closest_off_pl_dist(car_game_id,car_play_id, car_frame_id, car_x, car_y)) %>%
+    ungroup()
+  
+  return(pair)
+
+}
+
+carrier_tackler <- 1:9 %>% map_dfr(car_tack_pairs_each_week)
+
+
+```
+
+
+Exploring the relationships between the location variables and time.
+
+
+``` {r}
+
+carrier_tackler %>%
+  ggplot(aes(x = time_to_col, y = dist_to_car)) +
+  geom_point(alpha = 0.5, aes(color = off_pl_btw)) +
+  geom_smooth(se = FALSE)
+
+carrier_tackler %>%
+  dplyr::group_by(unq_play_id) %>%
+  slice_tail(n = 1) %>%
+  ungroup() %>% 
+  ggplot(aes(x = dist_to_car)) +
+  geom_density()
+
+carrier_tackler %>%
+  dplyr::group_by(unq_play_id) %>%
+  slice_tail(n = 1) %>%
+  ungroup() %>%
+  pull(dist_to_car) %>%
+  summary()
+
+carrier_tackler %>%
+  dplyr::group_by(unq_play_id) %>%
+  slice_tail(n = 1) %>%
+  ungroup() %>%
+  arrange(desc(dist_to_car)) %>%
+  dplyr::select(-c(car_x:car_weight,x:weight)) %>%
+  left_join(plays, by = c("car_game_id" = "gameId","car_play_id" = "playId")) %>%
+  View()
+
+
+ggpubr::ggarrange(
+
+  carrier_tackler %>%
+    ggplot(aes(x = dist_to_car, y = time_to_col)) +
+    geom_point(alpha = 0.5) +
+    geom_smooth(method = "gam"),
+
+  carrier_tackler %>%
+    ggplot(aes(x = vel_to_car, y = time_to_col)) +
+    geom_point(alpha = 0.5) +
+    geom_smooth(method = "gam"),
+  
+    carrier_tackler %>%
+    ggplot(aes(x = acc_to_car, y = time_to_col)) +
+    geom_point(alpha = 0.5) +
+    geom_smooth(method = "gam"),
+
+  carrier_tackler %>%
+    ggplot(aes(x = jerk_to_car, y = time_to_col)) +
+    geom_point(alpha = 0.5) +
+    geom_smooth(method = "gam"),
+  ncol = 2,nrow = 2
+)
+
+```
+
+Looking at the distribution of time to col response variable. This is going to have to change from normal distribution to something else. Possibly tweedie distribution or some of ther gamma distribution.
+
+``` {r}
+carrier_tackler %>%
+  ggplot(aes(x = time_to_col)) +
+  geom_density()
+
+carrier_tackler %>%
+  ggplot(aes(x = log(time_to_col))) +
+  geom_density()
+
+carrier_tackler$time_to_col %>% summary()
+
+carrier_tackler$time_to_col[carrier_tackler$time_to_col == 0] <- 0.01 
+
+# fitting the distribution
+
+plotdist(carrier_tackler$time_to_col, histo = TRUE, demp = TRUE )
+
+descdist(carrier_tackler$time_to_col, boot = 1000)
+
+nbinf <- fitdist(carrier_tackler$time_to_col,"nbinom")
+normf <- fitdist(carrier_tackler$time_to_col,"norm")
+expf <- fitdist(carrier_tackler$time_to_col,"exp")
+poisf <- fitdist(carrier_tackler$time_to_col,"pois")
+lnormf <- fitdist(carrier_tackler$time_to_col,"lnorm")
+
+nbinf$aic # close 2nd
+normf$aic
+expf$aic # lowest
+poisf$aic
+lnormf$aic
+
+qqcomp(list(nbinf,normf,expf,poisf))
+
+gofstat(list(nbinf,normf,expf,poisf))
+
+# now trying out a tweedie distribution and can compare aic bic
+tw_est <- tweedie.profile(carrier_tackler$time_to_col ~ 1,
+                          p.vec = seq(1.5,2.5, by = 0.1)
+                          )
+tw_est$p.max
+
+twdf <- glm(time_to_col ~ 1, data = carrier_tackler,
+    family = tweedie(var.power = tw_est$p.max))
+
+
+AICtweedie(twdf)
+
+```
+
+
+
+Wanting to look at the distribution of the time to collision at the start of the play as well as average time to collision for each play. We know the residuals will be correlated given the time series, but this may give a better understanding of the underlying distribution. 
+
+``` {r}
+carrier_tackler %>%
+  dplyr::group_by(car_game_id, car_play_id) %>%
+  dplyr::summarise(start_ttc = max(time_to_col), 
+                   avg_ttc = mean(time_to_col),
+                   sqrt_start_ttc = sqrt(start_ttc)) %>%
+  ungroup() %>%
+  ggplot() +
+  geom_density(aes(x = start_ttc)) +
+  geom_density(aes(x = avg_ttc), color = "blue") +
+  geom_density(aes(x = sqrt_start_ttc), color = "red")
+
+
+# now fitting the start time to col instead of whole time to col, we know there is autocorrelation
+
+start_ttc <- carrier_tackler %>%
+  dplyr::group_by(car_game_id, car_play_id) %>%
+  dplyr::summarise(start_ttc = max(time_to_col), 
+                   avg_ttc = mean(time_to_col)) %>%
+  ungroup() %>%
+  pull(start_ttc)
+
+
+plotdist(start_ttc, histo = TRUE, demp = TRUE )
+
+descdist(start_ttc, boot = 1000)
+
+nbinf <- fitdist(start_ttc,"nbinom")
+normf <- fitdist(start_ttc,"norm")
+expf <- fitdist(start_ttc,"exp")
+poisf <- fitdist(start_ttc,"pois")
+lnormf <- fitdist(start_ttc,"lnorm")
+
+nbinf$aic # close 2nd
+normf$aic
+expf$aic # lowest
+poisf$aic
+lnormf$aic
+
+qqcomp(list(nbinf,normf,lnormf))
+
+gofstat(list(nbinf,normf,lnormf))
+
+
+# potentially look at correlation between different variables at the play level
+```
+The starting time to collision and average time to collision are much more normally distributed when taking only one point per play. This gets rid of the autocorrelation of the time series point. Supports the use of a random intercept at the start time to collision. I can't use the average start to collision in the eventual use of this modeling. Log normal is the best fitting distribution for the starting time to collision. Maybe that is what should be modeled instead of time to col
+
+Beginning of the reverse modeling idea. Potential inclusion of height and weight as a proxy of potential ability to move and wingspan
+
+``` {r}
+summary(lm(time_to_col ~ dist_to_car, data = carrier_tackler))
+summary(lm(time_to_col ~ dist_to_car + vel_to_car, data = carrier_tackler))
+summary(lm(time_to_col ~ dist_to_car + vel_to_car + acc_to_car, data = carrier_tackler))
+summary(lm(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car, data = carrier_tackler))
+summary(lm(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car +
+             off_pl_btw + min_off_dist, data = carrier_tackler))
+summary(gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"), data = carrier_tackler))
+summary(gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+              te(dist_to_car , height_in) + te(weight, vel_to_car,acc_to_car,jerk_to_car) +
+              te(dist_to_car,vel_to_car,acc_to_car,jerk_to_car), data = carrier_tackler)) # this has 51% deviance explained could be bad with large data where bam should be used
+
+summary(bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+              te(dist_to_car , height_in) + te(weight, vel_to_car,acc_to_car,jerk_to_car) +
+              te(dist_to_car,vel_to_car,acc_to_car,jerk_to_car), data = carrier_tackler))
+
+summary(bam(sqrt(time_to_col) ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+              te(dist_to_car , height_in) + te(weight, vel_to_car,acc_to_car,jerk_to_car) +
+              te(dist_to_car,vel_to_car,acc_to_car,jerk_to_car), data = carrier_tackler))
+
+summary(bam(sqrt(time_to_col) ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+              s(start_dist, bs = "re") +
+              te(dist_to_car,vel_to_car,acc_to_car,jerk_to_car), data = carrier_tackler))
+
+anova(
+  lm(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car, data = carrier_tackler),
+  gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"), data = carrier_tackler)
+)
+
+gamnorm <- gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"), data = carrier_tackler)
+gamtw <- gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"), data = carrier_tackler,
+            family = tw())
+
+gamtw2 <- gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"), data = carrier_tackler,
+            family = Tweedie(p = tw_est$p.max))
+
+gamnb <- gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"), data = carrier_tackler,
+            family = nb())
+
+par(mfrow = c(2,2))
+gam.check(gamnorm)
+gam.check(gamtw)
+gam.check(gamnb)
+
+AIC(gamnorm,gamtw,gamnb) # tweedie is the best 
+AIC(gamtw, gamtw2) # tw() estimation is better than the tweedie profile estimation
+
+# for some reason using family tweedie fits worse, maybe fit is worse but residual analysis is better
+# aic fit is better for the tweedie model, much better
+
+summary(gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+              
+              , data = carrier_tackler, family = tw()))
+
+gamre <- gam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+               s(start_dist, bs = "re"), data = carrier_tackler)
+
+gam.check(gamre)
+
+AIC(gamre,gamnorm)
+
+acf(resid(gamre), lag.max = 76)
+pacf(resid(gamre), lag.max = 10)
+acf(resid(gamre), lag.max = 76)$acf[2]
+
+```
+
+Getting into autocorrelated residuals and generalized additive mixed effects model. Distance at the start as the mixed effect to declare the points from the same play and put them together. Bam function may be able to incorporate tweedie function for underlying distribution as well as autocorrelated residuals
+
+``` {r}
+par(mfrow = c(1,2))
+acf(resid(gamtw),lag.max = 36, main = "ACF")
+pacf(resid(gamtw),lag.max = 36, main = "PACF")
+
+gamtw_ar1 <- gamm(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+                s(start_dist), 
+             correlation = corARMA(form =  ~1 | start_dist, p = 1),
+             data = carrier_tackler)
+
+gamtw_ar1_re <- gamm(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+                s(start_dist, bs = "re"), # random intercept
+               correlation = corARMA(form =  ~1 | start_dist, p = 1),
+              data = carrier_tackler)
+
+bam_tw_ar <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"),
+              rho = 0.9968635, # alpha value from model summary
+              discrete = TRUE,
+              family = tw(),
+              data = carrier_tackler)
+
+bam_nb_ar <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"),
+              rho = 0.9968635, # alpha value from model summary
+              discrete = TRUE,
+              family = nb(),
+              data = carrier_tackler)
+
+acf(resid(gamtw),lag.max = 36, main = "ACF")$acf[2]
+
+bam_tw_ar2 <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"),
+              rho = 0.8111984, # rho value from the plot
+              discrete = TRUE,
+              family = tw(),
+              data = carrier_tackler)
+
+bam_tw_ar_re <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") + 
+                s(start_dist, bs = "re"),
+              rho = 0.9968635, 
+              discrete = TRUE,
+              family = tw(),
+              data = carrier_tackler)
+
+bam_ar <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"),
+              rho = 0.9968635, 
+              data = carrier_tackler)
+
+bam_ar2 <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr"),
+              rho = 0.8111984, 
+              data = carrier_tackler)
+
+bam_ar_re <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") +
+                s(start_dist, bs = "re"),
+              rho = 0.9049429, 
+              AR.start = carrier_tackler$start_frame,
+              data = carrier_tackler)
+gam.check(bam_ar_re)
+acf_resid(gamre, split_pred = "start_dist")
+
+acf(resid_gam(bam_ar_re))
+
+par(mfrow = c(1,2))
+acf(resid(bam_ar_re),lag.max = 10, main = "ACF")
+pacf(resid(bam_ar_re),lag.max = 10, main = "PACF")
+
+AIC(gamtw,gamtw_ar1$lme, gamtw_ar2$lme,gamtw_ar1_re$lme, bam_tw_ar, bam_ar, bam_tw_ar_re)
+
+# bam tw ar has the best fit according to fitted vs residual values and AIC
+
+
+summary(gamtw_ar1)
+
+par(mfrow = c(2,2))
+
+plot(gamtw_ar1$lme)
+
+gam.check(gamtw_ar1$gam)
+gam.check(bam_tw_ar)
+gam.check(bam_ar)
+
+MLmetrics::RMSE(bam_tw_ar$fitted.values, bam_tw_ar$y)
+
+anova.gam(bam_tw_ar,bam_tw_ar2)
+
+AIC(bam_tw_ar,bam_tw_ar2)
+
+AIC(bam_ar2, bam_tw_ar, bam_nb_ar)
+
+gam.check(bam_tw_ar2) # tweedie distribution does not seem to be the best for explaining
+
+```
+Maybe need to account for the variance differently but definitely should help determining the plays separately. Mixed effects and or autocorrelated structure which were tried above, some successfully some unsuccessfully. Underlying distribution needs to be specified better potentially. Tweedie is the best currently but try more just to see
+
+
+Trying a completely different approach with a random forest just to test
+
+``` {r}
+rf <- randomForest::randomForest(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car +
+                                   rel_velo + height_in + weight + start_dist,
+                           data = car_tack_train, na.action = na.omit)
+
+summary(rf) # 50 % variance explained but rmse is not good
+
+MLmetrics::MAE(rf$predicted,rf$y)
+rf
+
+
+
+rfp <- predict(rf, car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)))
+
+MLmetrics::RMSE(rfp,car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>% pull(time_to_col))
+
+data.frame() %>%
+  ggplot(aes(x = rfp, y = car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>% pull(time_to_col))) +
+  geom_point() +
+  geom_abline()
+
+
+rf2 <- randomForest::randomForest(log(time_to_col+0.01) ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car +
+                                   rel_velo + height_in + weight + start_dist,
+                           data = car_tack_train, na.action = na.omit)
+
+summary(rf2) # 50 % variance explained but rmse is not good
+
+MLmetrics::MAE(rf2$predicted,rf2$y)
+rf2
+
+
+
+rf2p <- predict(rf2, car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)))
+
+MLmetrics::RMSE(rf2p,car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                  dplyr::mutate(time_to_col = log(time_to_col+0.01)) %>% pull(time_to_col))
+
+data.frame() %>%
+  ggplot(aes(x = rf2p, y = car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                  dplyr::mutate(time_to_col = log(time_to_col+0.01)) %>% pull(time_to_col))) +
+  geom_point() +
+  geom_abline()
+
+
+# tune hyperparameters for a random forest here
+
+View(car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                  dplyr::mutate(time_to_col = log(time_to_col+0.01),
+                                preds = rf2p) )
+
+
+
+
+```
+
+### Best modeling procedure random forest with tidymodels
+
+Hyperparameter tuning process for randomforest to produce optimal model
+``` {r}
+library(tidymodels)
+set.seed(444)
+
+split <- group_initial_split(carrier_tackler %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)),
+                             group = unq_play_id, 
+                             p = 0.8)
+
+tr_data <- training(split) 
+te_data <- testing(split)
+
+rf_recipe <- recipe(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car +
+                                   rel_velo + height_in + weight + start_dist +
+                                   off_pl_btw + min_off_dist,
+                    data = tr_data) %>%
+  step_mutate(time_to_col = log(time_to_col+0.001))
+
+rf_prep <- prep(rf_recipe)
+rf_bake <- bake(rf_prep, new_data = NULL)
+
+tune_par <- rand_forest(
+  mtry = tune(),
+  trees = 500,
+  min_n = tune()
+) %>%
+  set_mode("regression") %>%
+  set_engine("ranger")
+
+tune_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(tune_par)
+
+rep_cv <- group_vfold_cv(tr_data, group = unq_play_id, v = 10, repeats = 3)
+
+doParallel::registerDoParallel(cores = 8)
+
+# tune_res <- tune_grid(
+#   tune_wf,
+#   resamples = rep_cv,
+#   grid = 20
+# )
+# 
+# tune_res %>%
+#   collect_metrics() %>%
+#   filter(.metric == "rmse") %>%
+#   dplyr::select(mean, min_n, mtry) %>%
+#   pivot_longer(min_n:mtry,
+#     values_to = "value",
+#     names_to = "parameter"
+#   ) %>%
+#   ggplot(aes(value, mean, color = parameter)) +
+#   geom_point(show.legend = FALSE) +
+#   facet_wrap(~parameter, scales = "free_x") +
+#   labs(x = NULL, y = "RMSE")
+# 
+# tune_res %>%
+#   collect_metrics() %>%
+#   filter(.metric == "rsq") %>%
+#   dplyr::select(mean, min_n, mtry) %>%
+#   pivot_longer(min_n:mtry,
+#     values_to = "value",
+#     names_to = "parameter"
+#   ) %>%
+#   ggplot(aes(value, mean, color = parameter)) +
+#   geom_point(show.legend = FALSE) +
+#   facet_wrap(~parameter, scales = "free_x") +
+#   labs(x = NULL, y = "Fit")
+
+# min n over 20 is good
+# mtry under 4 is good
+```
+
+
+Second round of tuning going on with more specific range. 
+
+``` {r}
+grid_2 <- grid_regular(
+  min_n(range = c(30,80)),
+  mtry(range = c(1,4)),
+  levels = 5
+)
+
+set.seed(333)
+tune_res_2 <- tune_grid(
+  tune_wf,
+  resamples = rep_cv,
+  grid = grid_2
+)
+
+tune_res_2 %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "RMSE")
+
+tune_res_2 %>%
+  collect_metrics() %>%
+  filter(.metric == "rsq") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "Fit")
+
+best_rmse <- select_best(tune_res_2, "rmse")
+
+final_rf <- finalize_model(
+  tune_par,
+  best_rmse
+)
+
+final_rf
+
+final_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(final_rf)
+
+final_res <- final_wf %>%
+  last_fit(split)
+
+final_res %>%
+  collect_metrics()
+
+# Adding in some diagnostic plots for model evaulation
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_pred = exp(`.pred`)-0.001) %>%
+  bind_cols(te_data) %>%
+  ggplot(aes(x = `time_to_col...53`, y = time_pred)) +
+  geom_point(alpha = 0.4) +
+  geom_abline()
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  pull(time_minus_prediction) %>% 
+  summary()
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  pull(time_minus_prediction) %>% 
+  exp(.) %>%
+  summary()
+  
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  ggplot(aes(x = time_minus_prediction)) +
+  geom_density()
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  filter(time_to_col > 0) %>%
+  ggplot(aes(x = exp(time_to_col),y = time_minus_prediction)) +
+  geom_point() +
+  geom_smooth()
+
+```
+
+On average the actual time values are above the predictions by 3 frames. One frame above for the median. This is most likely due to the lack of features that need to be incorporated that would complicate the tackling process, like number of people in between the tackler and the ball carrier, and if they are engaged in a block or not. Both of these factors are unaccounted for and would increase the time to be able to tackle. 
+After adding them in the predictions are about the same, residual plots look decent. Residuals are normally distributed around ~ 0.1. Residuals vs fitted values show a slight positive trend which isn't great but not bad. 
+
+
+
+Take a random point for each play and model based off this one random play. No correlated residuals... independent samples to be modeled with gam/bam mixed effects model
+
+``` {r}
+set.seed(444)
+one_per <- carrier_tackler %>%
+  dplyr::group_by(car_game_id,car_play_id) %>%
+  slice_sample(n = 1)
+
+one_per %>% 
+  ggplot(aes(x = time_to_col)) +
+  geom_density()
+
+summary(one_per$time_to_col)
+sd(one_per$time_to_col)
+
+
+one_per_bam_tw_re <- bam(time_to_col ~ s(dist_to_car, bs = "cr") + s(vel_to_car, bs = "cr") + 
+              s(acc_to_car, bs = "cr") + s(jerk_to_car, bs = "cr") + 
+              s(start_dist, bs = "re"),
+              family = tw(),
+              data = one_per)
+
+gam.check(one_per_bam_tw_re)
+
+plot(one_per_bam_tw_re$fitted.values,one_per_bam_tw_re$model$time_to_col)
+MLmetrics::RMSE(one_per_bam_tw_re$fitted.values,one_per_bam_tw_re$model$time_to_col)
+MLmetrics::MAE(one_per_bam_tw_re$fitted.values,one_per_bam_tw_re$model$time_to_col)
+
+
+```
+
+
+Additional features used by the 2020 winning big data bowl rushing yards submission were defender speed, relative distance, relative speed. They were predicting yards in the end
+
+Setting up time to event survival models. The time to the collision is what we are predicting. The collision happening is the "death" in survival models. Random forest or cox survival modeling should be used as long as the time to collision variable can be modeled and predicted. Not looking for the probability of survival at each instance, looking for the actual time. See if cubic splines can be incorporated. 
+
+Setting up the data to use dynforest package with longitudinal survival type prediction
+
+``` {r}
+library(DynForest)
+set.seed(444)
+
+# heres the example
+
+ set.seed(1234)
+id <- unique(pbc2$id)
+id_sample <- sample(id, length(id)*2/3)
+ 
+id_row <- which(pbc2$id %in% id_sample)
+pbc2_train <- pbc2[id_row,]
+pbc2_pred <- pbc2[-id_row,]
+
+timeData_train <- pbc2_train[,c("id","time",
+                                "serBilir","SGOT",
+                                "albumin","alkaline")]
+fixedData_train <- unique(pbc2_train[,c("id","age","drug","sex")])
+
+timeVarModel <- list(serBilir = list(fixed = serBilir ~ time,
+                                     random = ~ time),
+                     SGOT = list(fixed = SGOT ~ time + I(timeˆ2),
+                                 random = ~ time + I(timeˆ2)),
+                     albumin = list(fixed = albumin ~ time,
+                                    random = ~ time),
+                     alkaline = list(fixed = alkaline ~ time,
+                                     random = ~ time))
+
+Y <- list(type = "surv",
+          Y = unique(pbc2_train[,c("id","years","event")]))
+
+res_dyn <- DynForest(timeData = timeData_train,
+                     fixedData = fixedData_train,
+                     timeVar = "time", idVar = "id",
+                     timeVarModel = timeVarModel, Y = Y,
+                     ntree = 200, mtry = 3, nodesize = 2, minsplit = 3,
+                     cause = 2, ncores = 3, seed = 1234)
+#carrier_tackler
+
+
+
+uniq_plays <- carrier_tackler %>%
+  dplyr::select(car_game_id,car_play_id) %>%
+  distinct()
+
+train_plays <- uniq_plays %>%
+  slice_sample(prop = 0.5)
+
+test_plays <- anti_join(uniq_plays, train_plays)
+
+car_tack_train <- carrier_tackler %>% 
+  inner_join(train_plays) %>%
+  dplyr::group_by(car_game_id,car_play_id) %>%
+  dplyr::mutate(play_id = cur_group_id() %>% as.factor()) %>%
+  ungroup()
+
+# Use the distance at the start of the play as the "ID" 
+# If this doesnt work might need to create an arbitrary ID and use the distance as a fixed effect
+
+timedata_train <- car_tack_train %>%
+  dplyr::select(play_id, timer, dist_to_car:rel_velo, dir, car_dir) %>%
+  as.data.frame()
+
+fixeddata_train <- car_tack_train %>%
+  dplyr::select(play_id,start_dist, weight,height_in) %>%
+  distinct() %>%
+  as.data.frame()
+
+# timevar_model <- list(
+#   dist_to_car = list(fixed = dist_to_car ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re")),
+#   vel_to_car = list(fixed = vel_to_car ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re")),
+#   acc_to_car = list(fixed = acc_to_car ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re")),
+#   jerk_to_car = list(fixed = jerk_to_car ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re")),
+#   rel_velo = list(fixed = rel_velo ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re")),
+#   dir = list(fixed = dir ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re")),
+#   car_dir = list(fixed = car_dir ~ s(timer, bs = "cr"),
+#                      random = ~ s(timer, bs = "re"))
+# )
+timevar_model <- list(
+  dist_to_car = list(fixed = dist_to_car ~ timer,
+                     random = ~ timer),
+  vel_to_car = list(fixed = vel_to_car ~ timer,
+                     random = ~ timer),
+  acc_to_car = list(fixed = acc_to_car ~ timer,
+                     random = ~ timer),
+  jerk_to_car = list(fixed = jerk_to_car ~ timer,
+                     random = ~ timer),
+  rel_velo = list(fixed = rel_velo ~ timer,
+                     random = ~ timer),
+  dir = list(fixed = dir ~ timer,
+                     random = ~ timer),
+  car_dir = list(fixed = car_dir ~ timer,
+                     random = ~ timer)
+)
+
+
+Y <- list(type = "numeric",
+          Y = car_tack_train %>%
+            dplyr::select(play_id,time_to_col ) %>%
+            as.data.frame()
+          )
+
+dyn_for_build <- DynForest(timeData = timedata_train,
+                           fixedData = fixeddata_train,
+                           timeVar = "timer",idVar = "play_id",
+                           timeVarModel = timevar_model,
+                           mtry = 4, #maximum for this set
+                           Y = Y, ncores = 6, seed = 444,
+                           nodesize = 5)
+
+dyn_OOB <- compute_OOBerror(DynForest_obj = dyn_for_build,
+                                ncores = 6)
+
+summary(dyn_for_build)
+summary(dyn_OOB)
+
+car_tack_test <- carrier_tackler %>% 
+  anti_join(train_plays) %>%
+  dplyr::group_by(car_game_id,car_play_id) %>%
+  dplyr::mutate(play_id = cur_group_id() %>% as.factor()) %>%
+  ungroup() 
+
+# Use the distance at the start of the play as the "ID" 
+# If this doesnt work might need to create an arbitrary ID and use the distance as a fixed effect
+
+timedata_test <- car_tack_test %>%
+  dplyr::select(play_id, timer, dist_to_car:rel_velo, dir, car_dir) %>%
+  as.data.frame()
+
+fixeddata_test <- car_tack_test %>%
+  dplyr::select(play_id,start_dist, weight,height_in) %>%
+  distinct() %>%
+  as.data.frame()
+
+predict_dyn <- predict(
+  object = dyn_for_build,
+  timeData = timedata_test,
+  fixedData = fixeddata_test,
+  idVar = "play_id", timeVar = "timer"
+)
+
+ggplot(car_tack_test, aes(x  = time_to_col, y = as.numeric(predict_dyn$pred_indiv))) +
+  geom_point() +
+  geom_abline()
+
+# compare to mean square error of the regular data
+
+simple <- lm(time_to_col ~ dist_to_car + vel_to_car + acc_to_car +
+             rel_velo + dir + car_dir, 
+           data = car_tack_train)
+
+par(mfrow = c(2,2))
+plot(simple)
+par(mfrow = c(1,1))
+
+MLmetrics::RMSE(simple$model$time_to_col, simple$fitted.values)
+
+# this works but might take a while to run. up the cores to 10
+
+```
+
+This is extremely long to build, calculate oob, and even run predictions. Not sure how good the results are and they aren't the most interpretable.  Also looks like a simple regression model fits better than the complex forest. 
+
+Set up a cox survival regression
+
+``` {r}
+library(survival)
+
+uniq_plays <- carrier_tackler %>%
+  dplyr::select(car_game_id,car_play_id) %>%
+  distinct()
+
+train_plays <- uniq_plays %>%
+  slice_sample(prop = 0.5)
+
+test_plays <- anti_join(uniq_plays, train_plays)
+
+car_tack_train <- carrier_tackler %>% 
+  dplyr::group_by(car_game_id,car_play_id) %>%
+  dplyr::mutate(play_id = cur_group_id() %>% as.factor(),
+                target_tackle = ifelse(time_to_col == 0, 1,0),
+                timer_end = timer + 0.9) %>%
+  ungroup() %>%
+  inner_join(train_plays)
+
+
+tmerge(car_tack_train %>% 
+         dplyr::select(play_id,dist_to_car:jerk_to_car,rel_velo, start_dist,weight, 
+                       height_in, timer, timer_end, target_tackle),
+       car_tack_train, id = play_id)
+
+cox <- coxph(Surv(timer, timer_end, target_tackle) ~ 
+        pspline(dist_to_car) + pspline(vel_to_car) + pspline(acc_to_car) +
+        pspline(jerk_to_car) + rel_velo + start_dist + weight + height_in,
+      data = car_tack_train, cluster = play_id
+        )
+
+summary(cox)
+
+aa <- survfit(cox, newdata = car_tack_train)
+
+plot(
+car_tack_train$time_to_col,
+summary(aa)$table[,"median"]
+)
+
+plot(cox$var)
+  
+predict(cox, car_tack_train, type = "lp")
+
+
+
+```
+
+Hard to interperate results and get predictions. May just use neural network
+
+Try to fit a REEM tree random forest with random mixed effects
+
+``` {r}
+library(REEMtree)
+data("simpleREEMdata")
+
+reem <- REEMtree(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car,
+                   data = car_tack_train %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                   as.data.frame(),
+                 random = ~ 1|play_id)
+
+REEMtree::AutoCorrelationLRtest(reem) 
+
+reem2 <- REEMtree(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car,
+                   data = car_tack_train %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                   as.data.frame(),
+                 random = ~ 1|play_id,
+                 correlation = corAR1()) # way worse
+
+reem3 <- REEMtree(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car +
+                    start_dist + height_in + weight,
+                   data = car_tack_train %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                   as.data.frame(),
+                 random = ~ 1|play_id)
+
+
+
+preds <- predict.REEMtree(reem3,reem3$data)
+
+car_tack_train %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+  ggplot(aes(x = time_to_col, y = preds)) + geom_point() + geom_abline()
+
+MLmetrics::RMSE(preds,reem3$data$time_to_col)
+
+plot(preds,reem3$residuals)
+
+View(car_tack_train %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+       dplyr::mutate(predictions = preds) %>% head(100))
+
+### now looking at the test set results
+
+testpred <- predict.REEMtree(reem3, 
+                             car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                               as.data.frame(),
+                             id = car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>%
+                               pull(play_id),
+                             EstimateRandomEffects = TRUE)
+
+MLmetrics::MAE(testpred, 
+                car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>% pull(time_to_col))
+data.frame() %>%
+  ggplot(aes(x = testpred, 
+                 y = car_tack_test %>% drop_na(c(dist_to_car:jerk_to_car, time_to_col)) %>% pull(time_to_col))) +
+  geom_point() + geom_abline()
+
+```
+
+
+# Can we use distance to predict a tackle
+
+``` {r}
+
+
+simple_dist <- bind_rows(carrier_tackler %>% 
+            dplyr::group_by(unq_play_id) %>%
+            dplyr::mutate(tackle_bin = ifelse(timer == max(timer),1,0)) %>%
+            ungroup() %>%
+            dplyr::select(unq_play_id,dist_to_car,vel_to_car,acc_to_car,jerk_to_car,
+                          height_in,weight,car_height_in,car_weight,
+                          tackle_bin),
+          carrier_nontackler %>%
+            dplyr::mutate(tackle_bin = 0) %>%
+            dplyr::select(unq_play_id,dist_to_car,vel_to_car,acc_to_car,jerk_to_car,
+                          height_in,weight,car_height_in,car_weight,
+                          tackle_bin)) %>%
+  na.omit() %>%
+  dplyr::group_by(tackle_bin) %>%
+  slice_sample(n = 4000) %>%
+  ungroup()
+  
+
+dist_tack_mod <- randomForest::randomForest(as.factor(tackle_bin) ~ dist_to_car,
+            data = simple_dist, 
+            type = "classification")
+
+reprtree::plotge
+
+MLmetrics::Accuracy((predict(dist_tack_mod,simple_dist)),simple_dist$tackle_bin)
+
+tibble(dist_to_car = seq(0.1,10,0.1)) %>%
+  dplyr::mutate(preds = predict(dist_tack_mod,.)) %>% 
+  ggplot(aes(x = dist_to_car, y = preds)) +
+  geom_point() + geom_smooth()
+  
+# 1.6 is the cut point
+
+```
+
+Roughly 70-75% accurate using distance and player features to predict whether a tackle was made or not (with a balanced sample). Every value less than or equal to 1.6 yards from the defender gets predicted as able to make the tackle. With the modeling, we will look for the first instance where the defender is predicted to be within 1.6 yards of the ball carrier.
+
+
+# Pure probability of tackles occuring based on distance
+
+``` {r}
+simple_p <- bind_rows(carrier_tackler %>% 
+            dplyr::mutate(new_unq_id = paste0(unq_play_id,"-",nfl_id)) %>%
+            dplyr::group_by(new_unq_id) %>%
+            dplyr::mutate(tackle_bin = ifelse(timer == max(timer),1,0)) %>%
+            filter(dist_to_car == min(dist_to_car)) %>%
+            ungroup() %>%
+            dplyr::select(dist_to_car,tackle_bin),
+          carrier_nontackler %>%
+            dplyr::mutate(new_unq_id = paste0(unq_play_id,"-",nfl_id)) %>%
+            dplyr::group_by(new_unq_id) %>%
+            filter(dist_to_car == min(dist_to_car)) %>%
+            ungroup() %>%
+            dplyr::mutate(tackle_bin = 0) %>%
+            dplyr::select(dist_to_car,tackle_bin)
+            ) %>%
+  ungroup()
+
+calc_tackle_prob <- function(des_dist) {
+  calc <- simple_p %>%
+    filter(dist_to_car <= des_dist) %>%
+    summarise(tackle_frames = sum(tackle_bin),
+              frames = n(),
+              tackle_prob = tackle_frames / frames) %>%
+    pull(tackle_prob)
+  
+  return(calc)
+  
+}
+
+tibble(test_dist = seq(0.1,10,0.2)) %>%
+  dplyr::mutate(prob = map_dbl(test_dist,calc_tackle_prob)) %>%
+  ggplot(aes(x = test_dist, y = prob)) + 
+  geom_point()
+
+
+```
+With the revamped time stamps and distance between the carrier and the tackler we can see how much of an influence distance has on being able to make a tackle. Now we can use LSTM or something different in order to make predictions on the distance between the carrier and the tackler. 
+
+Need to determine the maximum amount of time needed for a prediction. Look at the carrier tackler pairs and the distribution of the amount of time between the start and end
+
+``` {r}
+carrier_tackler %>% 
+  dplyr::group_by(unq_play_id) %>%
+  summarise(dur = max(timer)) %>%
+  pull(dur) %>% summary()
+
+carrier_tackler %>% 
+  dplyr::group_by(unq_play_id) %>%
+  summarise(dur = max(timer)) %>%
+  pull(dur) %>% quantile(c(0.8,0.9,0.95,0.99))
+
+carrier_tackler %>% 
+  dplyr::group_by(unq_play_id) %>%
+  summarise(dur = max(timer)) %>%
+  ggplot(aes(x = dur)) + geom_density()
+```
+
+
+99th percentile of the duration is 68 frames. 95th percentile of duration is 52 frames. Choose one of these as the option for the number of projections needed for predicting distance. 
+
+
+### using the forecast ml package to set up forecasting for each sample
+
+Highest frequency able to be used on the package is claimed to be 1 sec, going to try to just run it as that and see what happens or may have to down sample...
+
+``` {r}
+library(forecastML)
+
+allpairs <- bind_rows(
+  carrier_tackler %>%
+    dplyr::mutate(pair_id = paste0(unq_play_id,"-",car_nfl_id,"-",nfl_id)) %>%
+    dplyr::select(car_height_in,car_weight,height_in,weight,dist_to_car,start_dist,timer,pair_id),
+  carrier_nontackler %>%
+    filter(unq_play_id %in% carrier_tackler$unq_play_id) %>%
+    dplyr::mutate(pair_id = paste0(unq_play_id,"-",car_nfl_id,"-",nfl_id)) %>%
+    dplyr::select(car_height_in,car_weight,height_in,weight,dist_to_car,start_dist,timer,pair_id)
+)
+
+summary(allpairs)
+
+allpairs %>% filter(timer == max(timer))
+
+```
+
+Set up LSTM with multiple batches based on timer duration. Max of 104 hz (timestamps) need to change each pair into length 104. Padding concept, but instead of padding with zeros, pad on the front end with the initial distance possibly. Or use 0 at the end to pad and accomidate for the zeros. Then set the batch length to be 104 to feed into the model each pair. "Masking feature" in keras to ignore 0 value, could use this.
+
+
+Dont need carrier tackler and non tackler, I want every carrier / defender pair with only the columns I need to run lstm. Changing function to just do that and return below
+
+
+``` {r}
+
+
+car_def_pairs_each_week <- function(week) {
+  stt <- Sys.time()
+  trackfile <- paste0("tracking_week_",week,".csv")
+  track1 <- read_csv(trackfile) %>% clean_names()
+  
+  tackle_involved_id <- tackles %>% pull(nflId)
+  
+  alldef <- track1 %>% 
+    inner_join(plays %>% dplyr::select(gameId,playId,defensiveTeam), 
+                   by = c("game_id" = "gameId","play_id" = "playId")) %>%
+    filter(display_name != "football",
+           club == defensiveTeam
+           ) 
+
+  allcar <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "ballCarrierId")) %>%
+        setNames(paste0("car_",names(.))) 
+  
+
+  pair <- inner_join(allcar,alldef, 
+                                by = c("car_game_id" = "game_id",
+                                       "car_play_id" = "play_id",
+                                       "car_frame_id" = "frame_id")) %>%
+    dplyr::group_by(car_game_id,car_play_id,nfl_id) %>%
+    dplyr::mutate(start = pick(event,car_frame_id) %>% filter(event %in% start_triggers) %>% 
+                    pull(car_frame_id) %>% min(),
+                  alt_start = pick(event,car_frame_id) %>% filter(event  == "ball_snap") %>% 
+                    pull(car_frame_id) %>% min(),
+                  start = ifelse(start == Inf,alt_start,start),
+                  end = pick(event,car_frame_id) %>% filter(event == "tackle") %>% # changing this from end trigger to tackle in hopes for improvement
+                    pull(car_frame_id) %>% min(),
+                  dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                  timer = car_frame_id - start,
+                  unq_play_id = paste0(car_game_id,"-",car_play_id,"-",car_nfl_id,"-",nfl_id)
+                  ) %>%
+    ungroup() %>%
+    filter(car_frame_id >= start,car_frame_id <= end) %>%
+    dplyr::select(unq_play_id,timer,dist_to_car)
+
+    ste <- Sys.time()
+  print(ste-stt)
+  return(pair)
+
+}
+
+carrier_def <- 1:9 %>% map_dfr(car_def_pairs_each_week) # trying for one week just to see how it works
+
+```
+
+
+I can use keras LSTM to predict one value ahead and iteratively feed the value into a new dataset to predict, for however many values i need. Better than having the model predict many points in advance
+
+An example to copy syntax
+
+``` {r}
+
+imdb <- dataset_imdb(num_words = 500)
+
+c(c(train_x, train_y), c(test_x, test_y)) %<-% imdb
+
+
+train_x <- pad_sequences(train_x, maxlen = 90)
+test_x <- pad_sequences(test_x, maxlen = 90)
+
+str(pad_sequences(train_x,maxlen = 218)) # this produces a matrix 
+
+model <- keras_model_sequential()
+model %>%
+  layer_embedding(input_dim = 500, output_dim = 32) %>%
+  layer_simple_rnn(units = 32) %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model %>% compile(optimizer = "rmsprop",
+                  loss = "binary_crossentropy",
+                  metrics = c("acc"))
+
+history <- model %>% fit(train_x, train_y,
+                         epochs = 25,
+                         batch_size = 128,
+                         validation_split = 0.2)
+plot(history)
+
+
+```
+
+
+Another example that i should be able to mimick
+``` {r}
+scale_factors <- c(mean(economics$unemploy), sd(economics$unemploy))
+scaled_train <- economics %>%
+    dplyr::select(unemploy) %>%
+    dplyr::mutate(unemploy = (unemploy - scale_factors[1]) / scale_factors[2])
+
+prediction <- 12
+lag <- prediction
+
+
+scaled_train <- as.matrix(scaled_train)
+ 
+# we lag the data 11 times and arrange that into columns
+x_train_data <- t(sapply(
+    1:(length(scaled_train) - lag - prediction + 1),
+    function(x) scaled_train[x:(x + lag - 1), 1]
+  ))
+ 
+# now we transform it into 3D form
+x_train_arr <- array(
+    data = as.numeric(unlist(x_train_data)),
+    dim = c(
+        nrow(x_train_data),
+        lag,
+        1
+    )
+)
+
+y_train_data <- t(sapply(
+    (1 + lag):(length(scaled_train) - prediction + 1),
+    function(x) scaled_train[x:(x + prediction - 1)]
+))
+ 
+y_train_arr <- array(
+    data = as.numeric(unlist(y_train_data)),
+    dim = c(
+        nrow(y_train_data),
+        prediction,
+        1
+    )
+)
+
+x_test <- economics$unemploy[(nrow(scaled_train) - prediction + 1):nrow(scaled_train)]
+
+
+# scale the data with same scaling factors as for training
+x_test_scaled <- (x_test - scale_factors[1]) / scale_factors[2]
+ 
+# this time our array just has one sample, as we intend to perform one 12-months prediction
+x_pred_arr <- array(
+    data = x_test_scaled,
+    dim = c(
+        1,
+        lag,
+        1
+    )
+)
+
+
+lstm_model <- keras_model_sequential()
+ 
+lstm_model %>%
+  layer_lstm(units = 50, # size of the layer
+       batch_input_shape = c(1, 12, 1), # batch size, timesteps, features
+       return_sequences = TRUE,
+       stateful = TRUE) %>%
+  # fraction of the units to drop for the linear transformation of the inputs
+  layer_dropout(rate = 0.5) %>%
+  layer_lstm(units = 50,
+        return_sequences = TRUE,
+        stateful = TRUE) %>%
+  layer_dropout(rate = 0.5) %>%
+  time_distributed(keras::layer_dense(units = 1))
+
+lstm_model %>%
+    compile(loss = 'mae', optimizer = 'adam', metrics = 'accuracy')
+ 
+summary(lstm_model)
+
+
+lstm_model %>% fit(
+    x = x_train_arr,
+    y = y_train_arr,
+    batch_size = 1,
+    epochs = 20,
+    verbose = 0,
+    shuffle = FALSE
+)
+
+
+lstm_forecast <- lstm_model %>%
+    predict(x_pred_arr, batch_size = 1) %>%
+    .[, , 1]
+ 
+# we need to rescale the data to restore the original values
+lstm_forecast <- lstm_forecast * scale_factors[2] + scale_factors[1]
+
+
+```
+
+
+Now here with my data
+
+``` {r}
+library(reticulate)
+#virtualenv_create(envname = "renv-tf-keras")
+#use_virtualenv("renv-tf-keras")
+#use_condaenv("r-reticulate", required = TRUE)
+library(keras)
+library(tensorflow)
+#install_tensorflow(method = "conda",envname = "r-reticulate",version = "2.9.1-cpu")
+#install_keras()
+set.seed(222)
+
+maxlen <- allpairs$timer %>% max()
+
+unq <- allpairs$pair_id %>% unique()
+
+dist_mn <- mean(allpairs$dist_to_car)
+dist_sd <-sd(allpairs$dist_to_car)
+
+trydat <- allpairs %>% filter(pair_id %in% sample(unq,100))
+
+testdat <- allpairs %>% filter(pair_id %in% sample(unq,100))
+
+calculate_lags <- function(df, var, lags){
+  map_lag <- lags %>% map(~partial(lag, n = .x))
+  return(df %>% mutate(across(.cols = {{var}}, .fns = map_lag, .names = "{.col}_lag{lags}")))
+}
+
+# trydat %>%
+#   dplyr::select(pair_id,dist_to_car) %>%
+#   dplyr::group_by(pair_id) %>%
+#   mutate(y = lead(dist_to_car,n = 1,default = 0),
+#         arr = list(c(dist_to_car,rep(0,maxlen - length(dist_to_car)))),
+#         arrlen = length(arr)) %>%
+#   View()
+
+# trydat %>%
+#   dplyr::select(pair_id,timer,dist_to_car) %>%
+#   dplyr::mutate(timer = as.character(timer)) %>%
+#   calculate_lags(dist_to_car,1:maxlen) %>%
+#   # dplyr::mutate(across(everything(),~replace_na(.x,0))) %>%
+#   dplyr::mutate(across(where(is.numeric), ~ (.x - dist_mn) / dist_sd))
+
+
+
+padded <- expand_grid(
+  pair_id = trydat$pair_id %>% unique(),
+  timer = 0:maxlen) %>%
+  left_join(trydat %>% distinct() %>% dplyr::mutate(dist_to_car = (dist_to_car - dist_mn) / dist_sd)) %>%
+  dplyr::select(pair_id,timer,dist_to_car) %>%
+  replace_na(list(dist_to_car = 0)) %>%
+  calculate_lags(dist_to_car,1:maxlen) %>%
+  replace(is.na(.),0)
+
+padded %>%
+  dplyr::group_by(pair_id) %>%
+  summarise(rows = n()) %>%
+  arrange(rows) %>% View()
+
+# paddedlist <- split(as.matrix(padded[,-c(1:3)]), 1:nrow(padded))
+paddedx <- as.matrix(padded[,-c(1:3)])
+paddedy <- padded$dist_to_car
+
+paddedx_arr <- array(
+    data = as.numeric(unlist(paddedx)),
+    dim = c(
+        nrow(paddedx),
+        104,
+        1
+    )
+)
+
+paddedy_arr <- array(
+    data = as.numeric(unlist(paddedy)),
+    dim = c(
+        length(paddedy),
+        1,
+        1
+    )
+)
+
+MLmetrics::RMSE(paddedy, lag(paddedy,1,default = 0)) # 0.129 is the baseline RMSE
+
+# may want to add in layer_embeddin masking zero
+
+model <- keras_model_sequential() %>%
+  layer_lstm(units = 32,
+             batch_input_shape = c(105, 104, 1), # batch size, timesteps, features
+             return_sequences = FALSE,
+             stateful = TRUE
+             ) %>%
+  layer_dense(units = 1)
+
+model %>%
+  compile(loss = "mse", optimizer = "adam")
+
+summary(model)
+
+model %>%
+  fit(x = paddedx_arr, y = paddedy_arr,
+      batch_size = 105,
+      epochs = 25,
+      shuffle = FALSE)
+
+
+
+
+paddedtest <- expand_grid(
+  pair_id = testdat$pair_id %>% unique(),
+  timer = 0:maxlen) %>%
+  left_join(testdat %>% distinct() %>% dplyr::mutate(dist_to_car = (dist_to_car - dist_mn) / dist_sd)) %>%
+  dplyr::select(pair_id,timer,dist_to_car) %>%
+  replace_na(list(dist_to_car = 0)) %>%
+  calculate_lags(dist_to_car,1:maxlen) %>%
+  replace(is.na(.),0)
+
+
+# paddedlist <- split(as.matrix(padded[,-c(1:3)]), 1:nrow(padded))
+tepaddedx <- as.matrix(paddedtest[,-c(1:3)])
+tepaddedy <- paddedtest$dist_to_car
+
+tepaddedx_arr <- array(
+    data = as.numeric(unlist(tepaddedx)),
+    dim = c(
+        nrow(tepaddedx),
+        104,
+        1
+    )
+)
+
+tepaddedy_arr <- array(
+    data = as.numeric(unlist(tepaddedy)),
+    dim = c(
+        length(tepaddedy),
+        1,
+        1
+    )
+)
+
+
+y_fc <- model %>%
+  predict(tepaddedx_arr, batch_size = maxlen+1) %>%
+   .[,,1]
+
+str(y_fc)
+str(tepaddedy_arr)
+```
+
+Again here but with all the data...
+
+``` {r}
+library(keras)
+library(tensorflow)
+#install_tensorflow(envname = "r-tensorflow")
+#install_keras()
+# use_condaenv("keras-tf", required = TRUE)
+
+set.seed(222)
+
+maxlen <- carrier_def$timer %>% max()
+
+unq <- carrier_def$pair_id %>% unique()
+
+dist_mn <- mean(carrier_def$dist_to_car)
+dist_sd <-sd(carrier_def$dist_to_car)
+
+
+
+calculate_lags <- function(df, var, lags){
+  map_lag <- lags %>% map(~partial(lag, n = .x))
+  return(df %>% mutate(across(.cols = {{var}}, .fns = map_lag, .names = "{.col}_lag{lags}")))
+}
+
+
+# how many lags should be used for lstm 
+lagz <- 20
+
+
+padded <- expand_grid(
+  unq_play_id = carrier_def$unq_play_id %>% unique(),
+  timer = 0:maxlen) %>%
+  left_join(carrier_def %>% distinct() %>% dplyr::mutate(dist_to_car = (dist_to_car - dist_mn) / dist_sd)) %>%
+  dplyr::select(unq_play_id,timer,dist_to_car) %>%
+  replace_na(list(dist_to_car = -dist_mn/dist_sd)) %>%
+  dplyr::group_by(unq_play_id) %>%
+  calculate_lags(dist_to_car,1:lagz) %>%
+  replace(is.na(.),0)
+
+split <- group_initial_split(padded,
+                             group = unq_play_id,
+                             p = 0.75)
+
+tr_lstm <- training(split) 
+te_lstm <- testing(split)
+
+
+# paddedlist <- split(as.matrix(padded[,-c(1:3)]), 1:nrow(padded))
+tr_paddedx <- as.matrix(tr_lstm[,-c(1:3)])
+tr_paddedy <- tr_lstm$dist_to_car
+
+tr_paddedx_arr <- array(
+    data = as.numeric(unlist(tr_paddedx)),
+    dim = c(
+        nrow(tr_paddedx),
+        lagz,
+        1
+    )
+)
+
+tr_paddedy_arr <- array(
+    data = as.numeric(unlist(tr_paddedy)),
+    dim = c(
+        length(tr_paddedy),
+        1,
+        1
+    )
+)
+
+MLmetrics::RMSE(tr_paddedy, lag(tr_paddedy,1,default = 0)) # 0.129 is the baseline RMSE
+MLmetrics::RMSE(te_paddedy, lag(te_paddedy,1,default = 0)) # 0.129 is the baseline RMSE
+
+# may want to add in layer_embeddin masking zero
+
+rm(padded,tr_lstm,te_lstm,split)
+gc()
+
+model <- keras_model_sequential() %>%
+  layer_masking(mask_value = -dist_mn/dist_sd,
+                batch_input_shape = c(maxlen+1, lagz, 1) # batch size, timesteps, features
+                             ) %>%
+  layer_lstm(units = 32,
+             #return_sequences = TRUE,
+             stateful = TRUE
+             ) %>%
+  layer_dense(units = 1)
+
+model %>%
+  compile(loss = "mse", optimizer = "adam")
+
+summary(model)
+
+################ This is running the model currently 6 hrs per epoch ############
+
+with(tf$device("CPU"),
+    rez <- model %>%
+      fit(x = tr_paddedx_arr, y = tr_paddedy_arr,
+          batch_size = maxlen+1,
+          epochs = 10,
+          validation_split = 0.2,
+          shuffle = FALSE)
+)
+
+plot(rez)
+
+################################################################################
+
+te_paddedx <- as.matrix(te_lstm[,-c(1:3)])
+te_paddedy <- te_lstm$dist_to_car
+
+te_paddedx_arr <- array(
+    data = as.numeric(unlist(te_paddedx)),
+    dim = c(
+        nrow(te_paddedx),
+        lagz,
+        1
+    )
+)
+
+te_paddedy_arr <- array(
+    data = as.numeric(unlist(te_paddedy)),
+    dim = c(
+        length(te_paddedy),
+        1,
+        1
+    )
+)
+with(tf$device("CPU"),
+model_forecast <- model %>%
+  predict(te_paddedx_arr, batch_size = maxlen+1)
+)
+
+MLmetrics::RMSE(model_forecast,te_paddedy)
+
+
+
+with(tf$device("CPU"),
+     model %>% evaluate(te_paddedx_arr,te_paddedy_arr, batch_size = maxlen+1) # 1.37 with one layer
+)
+```
+
+I don't know which version of python is running or how tbh, but it works. This is the key to reducing the amount of time to run through each epoch. 
+
+Here we have a performance bottleneck, add a layer and increase depth. Need to retrain and save the optimal weights of the model to reload and test out going forward.
+
+``` {r}
+
+model <- keras_model_sequential() %>%
+  layer_masking(mask_value = -dist_mn/dist_sd,
+                batch_input_shape = c(maxlen+1, lagz, 1) # batch size, timesteps, features
+                             ) %>%
+  layer_lstm(units = 32,
+             return_sequences = TRUE,
+             dropout = 0.1,
+             recurrent_dropout = 0.5,
+             stateful = TRUE
+             ) %>%
+  layer_lstm(units = 32,
+             #return_sequences = TRUE,
+             stateful = TRUE
+             ) %>%
+  layer_dense(units = 1)
+
+model %>%
+  compile(loss = "mse", optimizer = "adam")
+
+summary(model)
+
+
+with(tf$device("CPU"),
+    rez2 <- model %>%
+      fit(x = tr_paddedx_arr, y = tr_paddedy_arr,
+          batch_size = maxlen+1,
+          epochs = 20,
+          validation_split = 0.2,
+          shuffle = FALSE)
+)
+
+
+
+
+
+```
+
+# Pin the operation to the CPU to avoid the error
+with(tf$device("CPU"), keras::layer_random_rotation(x, .5) ) # No Error
+
+Looking at the results of the test data here.
+
+``` {r}
+te_paddedx <- as.matrix(te_lstm[,-c(1:3)])
+te_paddedy <- te_lstm$dist_to_car
+
+te_paddedx_arr <- array(
+    data = as.numeric(unlist(te_paddedx)),
+    dim = c(
+        nrow(te_paddedx),
+        lagz,
+        1
+    )
+)
+
+te_paddedy_arr <- array(
+    data = as.numeric(unlist(te_paddedy)),
+    dim = c(
+        length(te_paddedy),
+        1,
+        1
+    )
+)
+with(tf$device("CPU"),
+model_forecast <- model %>%
+  predict(te_paddedx_arr, batch_size = maxlen+1)
+)
+
+MLmetrics::RMSE(model_forecast,te_paddedy)
+
+plot(model_forecast,tepaddedy)
+with(tf$device("CPU"),
+  model %>% evaluate(te_paddedx_arr,te_paddedy_arr, batch_size = maxlen + 1) ### 1.349 loss with two LSTM layers
+)
+```
+
+### Saving model weights and only going to 10 epochs based on training
+
+Need to save the fitted weights of the model to a callback file in order to load these in and make predictions on the testing sets going forward. Retraining the model since it was not saved before. Using the loss plot, no real improvements after 10 epochs so we will stop at 10.
+
+
+``` {r}
+
+model <- keras_model_sequential() %>%
+  layer_masking(mask_value = -dist_mn/dist_sd,
+                batch_input_shape = c(maxlen+1, lagz, 1) # batch size, timesteps, features
+                             ) %>%
+  layer_lstm(units = 32,
+             return_sequences = TRUE,
+             dropout = 0.1,
+             recurrent_dropout = 0.5,
+             stateful = TRUE
+             ) %>%
+  layer_lstm(units = 32,
+             #return_sequences = TRUE,
+             stateful = TRUE
+             ) %>%
+  layer_dense(units = 1)
+
+model %>%
+  compile(loss = "mse", optimizer = "adam")
+
+summary(model)
+
+checkpoint_path <- "lstm_2l_training/cp.ckpt"
+checkpoint_dir <- fs::path_dir(checkpoint_path)
+
+# Create a callback that saves the model's weights
+cp_callback <- callback_model_checkpoint(
+  filepath = checkpoint_path,
+  save_weights_only = TRUE,
+  verbose = 1
+)
+
+
+with(tf$device("CPU"),
+    rez2 <- model %>%
+      fit(x = tr_paddedx_arr, y = tr_paddedy_arr,
+          batch_size = maxlen+1,
+          epochs = 10,
+          validation_split = 0.2,
+          shuffle = FALSE,
+          callbacks = list(cp_callback)
+          )
+)
+
+
+load_model_weights_tf(model,checkpoint_path) # with proper trained weights
+
+with(tf$device("CPU"),
+  model %>% evaluate(te_paddedx_arr,te_paddedy_arr, batch_size = maxlen + 1) ### 0.0624 loss
+)
+
+
+
+
+```
+
+Very good model results with 0.06 MSE on a held out test set.
+
+Need to make predictions for entire dataset. Then develop loops for subsequent test sets following each for the next 100 frames. Then we can run all of the next tackler stats.
+
+
+``` {r}
+
+last_ts_lagged <- carrier_def %>% distinct() %>% 
+  dplyr::mutate(dist_to_car = (dist_to_car - dist_mn) / dist_sd) %>%
+  dplyr::select(unq_play_id,timer,dist_to_car) %>%
+  replace_na(list(dist_to_car = -dist_mn/dist_sd)) %>%
+  dplyr::group_by(unq_play_id) %>%
+  calculate_lags(dist_to_car,1:lagz) %>%
+  replace(is.na(.),0) %>%
+  dplyr::group_by(unq_play_id) %>%
+  filter(timer == max(timer)) %>%
+  ungroup()
+
+last_ts_lagged %>%
+  ggplot(aes(x = dist_to_car)) +
+  geom_density()
+
+
+```
+
+Build a function to make predictions on each of the last time frames and predict 100 timestamps in advance. Naturally will predict out the number of steps from the batch size, 144. 144 frames is too long, need to predict ahead the next 42 frames. This covers 95% of cases.
+
+``` {r}
+set_random_seed(444)
+load_model_weights_tf(model,checkpoint_path) # with proper trained weights
+
+build_100_frame_predictions <- function(rowx) {
+  
+  lf_num <- last_ts_lagged$timer[rowx]
+  
+  id <- last_ts_lagged$unq_play_id[rowx]
+
+  matt <- as.matrix(last_ts_lagged[rowx,-c(1:3)])
+  
+  arr <- array(
+      data = as.numeric(unlist(matt)),
+      dim = c(
+          1,
+          lagz,
+          1
+      )
+  )
+  
+  
+  
+  with(tf$device("CPU"),
+  next_pred <- (model %>%
+    predict(arr, verbose = 0))[1,1]
+  )
+  
+  preds <- numeric()
+  preds[1] <- next_pred
+  
+  cur_frame <- c(next_pred,as.numeric(unlist(matt))[1:19])
+  for (i in 2:42) {
+    
+
+    newarr <- array(
+      data = cur_frame,
+        dim = c(
+            1,
+            lagz,
+            1
+            )
+    )
+
+   with(tf$device("CPU"),
+    new_pred <- (model %>% predict(newarr, verbose = 0))[1,1]
+        )
+    
+   preds[i] <- new_pred
+   
+   old_vals <- cur_frame[1:19]
+   cur_frame <- c(new_pred,old_vals)
+    
+    
+  }
+  
+  full_preds <- data.frame(unq_play_id = id,
+             timer = seq(lf_num+1,lf_num+42),
+             dist_to_car = as.numeric(preds)
+  )
+  
+  
+  return(full_preds)
+
+
+  
+}
+
+
+#predictions_all_plays <- 1:nrow(last_ts_lagged) %>% map_dfr(build_100_frame_predictions, .progress = TRUE)
+#future::plan("multisession", workers = 6)
+predictions_all_plays <- 1:nrow(last_ts_lagged) %>% map(build_100_frame_predictions, .progress = TRUE)
+#future::plan("default")
+predictions_all_plays_final <- bind_rows(predictions_all_plays)
+rm(predictions_all_plays)
+
+predictions_list <- list()
+
+s <- seq(1,nrow(last_ts_lagged),5000)
+f <- s+4999
+f <- sapply(f,function(x) min(x,nrow(last_ts_lagged)))
+
+for(i in 1:1) {
+  stt <- Sys.time()
+  
+  set_s <- s[i]
+  set_f <- f[i]
+  
+  print(paste0(i,":", s[i]," to ",f[i]))
+  inr_list <- set_s:set_f %>% map(build_100_frame_predictions, .progress = TRUE)
+  
+  predictions_list[[i]] <- bind_rows(inr_list)
+  
+  Sys.sleep(time  = 10)
+  gc()
+  Sys.sleep(time  = 10)
+  ste <- Sys.time()
+  
+  print(ste-stt)
+}
+
+
+```
+Trying to do this one section at a time. When run all together, rstudio kept crashing. Could be maxing out memory and needs the gc() and process reset in order to continue functioning through all the data
+
+
+``` {r}
+# subsetting the last_ts dataframe for only the last week
+
+wk9gms <- read.csv("tracking_week_9.csv") %>% 
+  clean_names() %>%
+  pull(game_id) %>%
+  unique()
+
+demo_set <- last_ts_lagged %>%
+  dplyr::mutate(game_id = unq_play_id %>% str_split_i("-",1)) %>%
+  filter(game_id %in% wk9gms) %>%
+  dplyr::select(-game_id)
+
+demo_predictions <- 1:nrow(demo_set) %>% map(build_100_frame_predictions, .progress = TRUE)
+
+demo_predictions_fin <- bind_rows(demo_predictions)
+```
+
+Size of the data is too large to make predictions on all the plays. Instead for the sake of demonstration, use maybe the last week. Need to find the last_ts_lagged data from the last week of the season and run predictions for that. 
+
+
+``` {r}
+predictions_all_plays %>%
+  filter(grepl("2022090800-56",unq_play_id)) %>%
+  ggplot(aes(x = timer, y = dist_to_car, color = unq_play_id)) +
+  geom_point() + geom_line()
+
+predictions_all_plays_final %>%
+  ggplot(aes(x = dist_to_car)) +
+  geom_density()
+
+```
+
+
+
+With the predictions, now for each play we will look at the next possible collision with a defender,
+distance less than 1.6 yards away. For each play we want to return one row. The row will show the time stamp of the earliest predicted tackle, or return that no tackle was predicted.
+
+``` {r}
+scaled_cut <- (1.6 - dist_mn) / dist_sd
+
+frame_sum <- predictions_all_plays_final %>%
+  dplyr::mutate(game_id = str_split_i(unq_play_id,"-",1),
+                play_id = str_split_i(unq_play_id,"-",2),
+                car_nfl_id = str_split_i(unq_play_id,"-",3),
+                def_nfl_id = str_split_i(unq_play_id,"-",4)) %>%
+  inner_join(tack_gr_each_play %>% dplyr::mutate(across(everything(),as.character)),
+               by = c("game_id" = "gameId","play_id" = "playId")) %>%
+  dplyr::group_by(game_id,play_id) %>%
+  filter(!(def_nfl_id %in% tack_all_ids)) %>%
+  ungroup() %>%
+  dplyr::group_by(game_id,play_id,timer) %>%
+  summarise(pred_tackle = ifelse(min(dist_to_car) < scaled_cut,1,0),
+            pred_closest_dist = min(dist_to_car),
+            pred_tackler_id = pick(dist_to_car,def_nfl_id) %>% filter(dist_to_car == pred_closest_dist) %>%
+              pull(def_nfl_id)) %>%
+  ungroup()
+View(frame_sum)
+
+
+play_sum <- frame_sum %>%
+  dplyr::group_by(game_id,play_id) %>%
+  summarise(new_tackle_occurs = ifelse(sum(pred_tackle) > 0,1,0),
+            new_tackle_frame = case_when(
+              new_tackle_occurs == 1 ~ pick(timer,pred_tackle) %>% filter(pred_tackle == 1) %>% 
+                pull(timer) %>% min(),
+              TRUE ~ max(timer)),
+            orig_tackle_frame = min(timer)-1,
+            diff_in_frames = new_tackle_frame - orig_tackle_frame
+              )
+  
+
+```
+
+

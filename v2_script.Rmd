@@ -1,0 +1,809 @@
+---
+title: "2024 Big Data Bowl"
+author: "Alex Laycock"
+date: "2023-11-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidymodels)
+library(lubridate)
+library(janitor)
+library(mgcv)
+library(fitdistrplus)
+library(tweedie)
+library(statmod)
+library(itsadug)
+```
+
+``` {r}
+# Loading in the data
+
+games <- read.csv("games.csv")
+players <- read.csv("players.csv") %>% clean_names() %>%
+  dplyr::mutate(ft = str_split_i(height,"-",1) %>% as.numeric(),
+                inch = str_split_i(height,"-",2) %>% as.numeric(),
+                height_in = ft*12+inch
+                )
+plays <- read.csv("plays.csv") 
+tackles <- read.csv("tackles.csv") 
+
+# Loading in the first week of tracking data to play around with
+track1 <- read.csv("tracking_week_1.csv") %>% clean_names()
+
+# Use dir instead of o to reference player motion
+```
+
+What event words are the key words that should be used when determining different factors
+
+``` {r}
+track1 %>% pull(event) %>% unique()
+# first_contact , tackle, qb_slide , touchdown, qb_sack , fumble - end 
+# run, handoff, lateral, snap_direct, pass_arrived, pass_outcome_caught - start
+start_triggers <- c("run", "handoff", "lateral", "snap_direct", "pass_arrived", "pass_outcome_caught")
+end_triggers <- c("first_contact" , "tackle", "qb_slide" , "touchdown", "qb_sack" , "fumble","out_of_bounds")
+```
+
+Keep only tackle and first contact for validation set. 
+
+
+### Yards Saved Metric and Why It Matters
+
+The metric we've chosen to create for this project is a yards saved metric. As it currently stands, yards saved can only be calculated on plays where there is a missed tackle. These are the plays to investigate to see how prevalent and how big of an impact yards saved has on the game of football. 
+
+``` {r}
+
+num_plays_w_tackle <- tackles %>% dplyr::group_by(gameId,playId) %>%
+  summarise(missed_tackle_binomial = ifelse(sum(pff_missedTackle, na.rm = TRUE)> 0,1,0)) %>%
+  ungroup() %>% nrow()
+
+missed_tackles <- tackles %>% filter(pff_missedTackle == 1)
+
+num_plays_w_missed_tackle <- missed_tackles %>% distinct(gameId,playId) %>% nrow()
+
+num_plays_w_missed_tackle / num_plays_w_tackle
+
+```
+
+Missed tackles only occurred on 15% of the plays with a tackle involved. 
+
+``` {r}
+# track1 %>% inner_join(missed_tackles, by = c("game_id" = "gameId","play_id" = "playId", "nfl_id" = "nflId")) %>% head(20)
+
+
+missed_tackle_yards <- function(week) {
+  # read in
+  trackfile <- paste0("tracking_week_",week,".csv")
+  track1 <- read_csv(trackfile) %>% clean_names()
+  
+  # only plays with missed tackles
+  track_mt <- track1 %>% inner_join(missed_tackles, by = c("game_id" = "gameId","play_id" = "playId"))
+  # only the ball carrier for those plays
+  allcar <- track_mt %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "ballCarrierId")) %>%
+        setNames(paste0("car_",names(.))) 
+  
+  # start indicated at first contact
+  # end indicated with the end tags: tackle, touchdown, oob
+  
+  mtsum <- allcar %>%
+    dplyr::group_by(car_game_id,car_play_id) %>%
+    dplyr::summarise(start_frame = pick(car_event,car_frame_id) %>% filter(car_event == "first_contact") %>% 
+                      pull(car_frame_id) %>% min(),
+                    end_frame = pick(car_event,car_frame_id) %>% 
+                      filter(car_event %in% c("tackle","qb_slide","touchdown",
+                                          "qb_sack","fumble","out_of_bounds")) %>%
+                      pull(car_frame_id) %>% min(),
+                    start_x = pick(car_event,car_x) %>% filter(car_event == "first_contact") %>% 
+                      pull(car_x) %>% min(),
+                    end_x = pick(car_event,car_x) %>% 
+                      filter(car_event %in% c("tackle","qb_slide","touchdown",
+                                          "qb_sack","fumble","out_of_bounds")) %>%
+                      pull(car_x) %>% min(),
+                    diff = abs(end_x - start_x)
+                  )
+  
+  
+  return(mtsum)
+
+}
+
+mt_summary <- 1:9 %>% map_dfr(missed_tackle_yards)
+
+
+# Taking the difference between first contact and tackle as the yards gained lost for a missed tackle
+```
+
+Now we have every missed tackle and the difference in yards between the tackle occuring and the first contact. We can analyze the distribution to understand the affect of this better.
+
+``` {r}
+mt_summary %>% filter(diff == Inf) %>% nrow() ### errant tagged plays
+
+track1 %>% inner_join(mt_summary %>% filter(diff == Inf), by = c("game_id" = "car_game_id","play_id" = "car_play_id")) %>% View()
+# maybe investigate why there is an infinite difference
+# those plays don't have a first contact variable, can't assign value to missed yards
+
+mt_summary <- mt_summary %>% filter(diff < Inf)
+
+mt_summary %>%
+  ggplot(aes(x = diff)) + geom_density()
+
+mt_summary %>% pull(diff) %>% summary() # Distribution of the yards gained after missed tackles
+
+total_missed_tackle_yds <- mt_summary %>% pull(diff) %>% sum() # Total yards from missed tackles 
+
+total_yards <- plays %>% inner_join(tackles) %>% distinct(gameId,playId, .keep_all = TRUE) %>%
+  pull(playResult) %>% sum()
+
+# Percentage of all yards coming from missed tackles
+total_missed_tackle_yds / total_yards
+
+```
+
+On plays with a missed tackle, average of 7.7 yards and median of 5.5 yards were gained after the missed tackle. Total of 13,104 yards occurred after missed tackles. Also, for plays where a tackle was made, 15.5%  of the total yards came after a missed tackle. This is a significant amount of yards that resulted from missed tackles. Definitely something that should be accounted for. 
+
+Which teams gave up the most missed tackles and most yards from missed tackles?
+
+``` {r}
+mt_summary %>% 
+  left_join(plays, by = c("car_game_id" = "gameId","car_play_id" = "playId")) %>%
+  dplyr::group_by(defensiveTeam) %>%
+  dplyr::summarise(yds_from_missed_tackles = sum(diff, na.rm = TRUE)) %>%
+  ungroup() %>%
+  ggplot(aes(x = reorder(defensiveTeam,desc(yds_from_missed_tackles)), y = yds_from_missed_tackles)) +
+  geom_bar(stat = "identity")
+# bring in nflverse plotting info to add logos and colors to this plot
+
+```
+
+### Getting the average duration between catch/handoff and tackle
+
+``` {r}
+# Create a loop that takes a week of tracking data
+# groups all the plays
+# returns a data frame with the play id and the time between start and end triggers
+# use the ball for only one set of tracking data per play
+tr_files <- list.files()[grepl("tracking",list.files())]
+
+carry_duration <- function(row_n) {
+  
+  
+    bbbb <- read.csv(tr_files[row_n]) %>%
+      clean_names() %>%
+      filter(display_name == "football") %>%
+      dplyr::mutate(starts  = ifelse(event %in% start_triggers, "start",NA),
+                ends = ifelse(event %in% end_triggers, "end",NA),
+                cap_frames = ifelse(starts == "start" | ends == "end", frame_id,NA)) %>%
+      dplyr::group_by(game_id,play_id) %>%
+      dplyr::summarise(duration = max(cap_frames, na.rm = TRUE) - min(cap_frames, na.rm = TRUE)) %>% 
+      ungroup()
+  return(bbbb)
+}
+
+play_carry_duration <- 1:length(tr_files) %>% map_dfr(carry_duration)
+
+ggplot(play_carry_duration, aes(x = duration / 10)) + geom_density()
+
+play_carry_duration %>% pull(duration) %>% summary()
+```
+
+Average time with the ball is 2.7 seconds, to model the tackles with polynomials we will build the validation set with carries of at least 2 seconds (~25th percentile). This will assure that there is adequate data to model the trajectory of the distance between players. 
+
+Filtering the dataset of plays to meet all the conditions for testing
+
+``` {r}
+long_runs <- play_carry_duration %>% filter(duration > 20)
+
+# note 1809 plays result in out of bounds
+
+play_testing_set <- inner_join(plays,long_runs, by = c("gameId" = "game_id","playId" = "play_id")) %>%
+  filter(preSnapHomeTeamWinProbability > 0.1, preSnapHomeTeamWinProbability < 0.99,
+         !grepl("sack",playDescription,ignore.case = TRUE),
+         !grepl("touchdown",playDescription,ignore.case = TRUE),
+         !grepl("ob ",playDescription,ignore.case = TRUE))
+```
+
+
+### Creating data for modeling with carrier and tackler features being built in
+
+``` {r, echo = FALSE}
+# no assisted tackles, no missed tackles, just solo clean tackle
+clean_tackles <- tackles %>%
+  filter(tackle == 1, assist == 0, pff_missedTackle == 0)
+
+car_tack_pairs_each_week <- function(week) {
+  trackfile <- paste0("tracking_week_",week,".csv")
+  track1 <- read_csv(trackfile) %>% clean_names()
+  
+  alltack <- track1 %>% 
+    inner_join(clean_tackles,
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "nflId")) %>%
+    inner_join(players %>% dplyr::select(nfl_id, height_in,weight))
+  
+  allcar <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "ballCarrierId")) %>%
+        inner_join(players %>% dplyr::select(nfl_id, height_in,weight)) %>%
+        setNames(paste0("car_",names(.))) 
+  
+  alloff <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,possessionTeam,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","club" = "possessionTeam")) %>%
+        filter(nfl_id != ballCarrierId) %>%
+        setNames(paste0("off_",names(.))) 
+  
+  count_off_between <- function(game,play,frame,tack_x,tack_y,bc_x,bc_y) {
+    m = (tack_y - bc_y) / (tack_x - bc_x)
+    int = bc_y - m*bc_x
+    l_int = int - 1
+    u_int = int + 1
+    
+    pl_between_df <- alloff %>% 
+      filter(off_game_id == game, off_play_id == play, off_frame_id == frame) %>%
+      dplyr::mutate(calc_upper_y = m*off_x+u_int,
+                    calc_lower_y = m*off_x+l_int) %>%
+      filter(off_y <= calc_upper_y, off_y >= calc_lower_y)
+    
+    return(nrow(pl_between_df))
+      
+      # return the length of the data frame representing the number of people in between
+  }
+  
+  closest_off_pl_dist <- function(game,play,frame,tack_x,tack_y) {
+    clos <- alloff %>% 
+      filter(off_game_id == game, off_play_id == play, off_frame_id == frame) %>%
+      dplyr::mutate(dist_to_off = sqrt(((off_x-tack_x)^2) +  ((off_y-tack_y)^2))) %>%
+      pull(dist_to_off) %>%
+      min(., na.rm = TRUE)
+    
+    return(clos)
+  }
+  stt <- Sys.time()
+  pair <- inner_join(allcar,alltack, 
+                                by = c("car_game_id" = "game_id",
+                                       "car_play_id" = "play_id",
+                                       "car_frame_id" = "frame_id")) %>%
+    inner_join(play_testing_set %>% dplyr::select(gameId,playId),
+               by = c("car_game_id" = "gameId", "car_play_id" = "playId")) %>%
+    dplyr::group_by(car_game_id,car_play_id) %>%
+    dplyr::mutate(start = pick(event,car_frame_id) %>% filter(event %in% start_triggers) %>% 
+                    pull(car_frame_id) %>% min(),
+                  end = pick(event,car_frame_id) %>% filter(event == "tackle") %>% # changing this from end trigger to tackle in hopes for improvement
+                    pull(car_frame_id) %>% min(),
+                  dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                  vel_to_car = dist_to_car - lag(dist_to_car), # in meters per hz
+                  acc_to_car = vel_to_car - lag(vel_to_car), # in meters per hz^2
+                  jerk_to_car = acc_to_car - lag(acc_to_car), # in meters per hz^3
+                  rel_velo = s - car_s,
+                  rel_o = o - car_o,
+                  rel_dir = dir - car_dir,
+                  start_dist = pick(start,dist_to_car) %>% filter(car_frame_id == start) %>% pull(dist_to_car),
+                  timer = car_frame_id - start,
+                  time_to_col = end - car_frame_id,
+                  start_frame = ifelse(timer == 0,TRUE,FALSE),
+                  unq_play_id = paste0(car_game_id,"-",car_play_id)
+                  ) %>%
+    ungroup() %>%
+    filter(car_frame_id >= start, car_frame_id <= end) #%>%
+    # rowwise() %>%
+    # dplyr::mutate(off_pl_btw = count_off_between(car_game_id, car_play_id,car_frame_id,x,y,car_x,car_y),
+    #               min_off_dist = closest_off_pl_dist(car_game_id,car_play_id, car_frame_id, x, y)
+    #               ) %>%
+    # ungroup() %>%
+    # dplyr::mutate(off_pl_btw = pmap_dbl(list(car_game_id, car_play_id,car_frame_id,x,y,car_x,car_y),
+    #                                     count_off_between),
+    #               min_off_dist = pmap_dbl(list(car_game_id,car_play_id, car_frame_id, x, y),
+    #                                       closest_off_pl_dist)
+#)
+  ste <- Sys.time()
+  print(ste-stt)
+  return(pair)
+
+}
+
+carrier_tackler <- 1:9 %>% map_dfr(car_tack_pairs_each_week)
+
+
+```
+
+### Best modeling procedure random forest with tidymodels
+
+Hyperparameter tuning process for randomforest to produce optimal model
+
+``` {r}
+set.seed(444)
+
+# split <- group_initial_split(carrier_tackler %>% drop_na(c(time_to_col)),
+#                              group = unq_play_id, 
+#                              p = 0.75)
+
+# Trying with only one row per sample to maintian IID assumptions
+
+split <- group_initial_split(carrier_tackler %>% 
+                               drop_na(c(time_to_col)) %>%
+                               dplyr::group_by(unq_play_id) %>%
+                               slice_sample(n = 1) %>%
+                               ungroup()
+                               ,
+                             group = unq_play_id,
+                             p = 0.75)
+
+tr_data <- training(split) 
+te_data <- testing(split)
+
+rf_recipe <- recipe(time_to_col ~ dist_to_car + vel_to_car + acc_to_car + jerk_to_car +
+                                   rel_velo + rel_o + rel_dir + height_in + weight + 
+                                   car_height_in + car_weight + start_dist +
+                                   off_pl_btw + min_off_dist,
+                    data = tr_data) %>%
+  step_mutate(time_to_col = log(time_to_col+0.001),
+              across(vel_to_car:jerk_to_car, function(x) ifelse(is.na(x),0,x)))
+
+rf_prep <- prep(rf_recipe)
+rf_bake <- bake(rf_prep, new_data = NULL)
+
+tune_par <- rand_forest(
+  mtry = tune(),
+  trees = 500,
+  min_n = tune()
+) %>%
+  set_mode("regression") %>%
+  set_engine("ranger", importance = "impurity")
+
+tune_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(tune_par)
+
+rep_cv <- group_vfold_cv(tr_data, group = unq_play_id, v = 10, repeats = 3)
+
+doParallel::registerDoParallel(cores = 8)
+
+tune_res <- tune_grid(
+  tune_wf,
+  resamples = rep_cv,
+  grid = 20
+)
+
+tune_res %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>%
+  dplyr::select(mean, min_n, mtry) %>%
+  pivot_longer(min_n:mtry,
+    values_to = "value",
+    names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "RMSE")
+
+tune_res %>%
+  collect_metrics() %>%
+  filter(.metric == "rsq") %>%
+  dplyr::select(mean, min_n, mtry) %>%
+  pivot_longer(min_n:mtry,
+    values_to = "value",
+    names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "Fit")
+
+# min n over 20 is good
+# mtry under 4 is good
+
+# on 2nd try min n seems not to matter, results across entire range
+```
+
+
+Second round of tuning going on with more specific range. 
+
+``` {r}
+grid_2 <- grid_regular(
+  min_n(range = c(10,60)),
+  mtry(range = c(1,6)),
+  levels = 5
+)
+
+set.seed(333)
+tune_res_2 <- tune_grid(
+  tune_wf,
+  resamples = rep_cv,
+  grid = grid_2
+)
+
+tune_res_2 %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, linewidth = 1.5) +
+  geom_point() +
+  labs(y = "RMSE")
+
+tune_res_2 %>%
+  collect_metrics() %>%
+  filter(.metric == "rsq") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, linewidth = 1.5) +
+  geom_point() +
+  labs(y = "Fit")
+
+best_rmse <- select_best(tune_res_2, "rmse")
+
+final_rf <- finalize_model(
+  tune_par,
+  best_rmse
+)
+
+final_rf
+
+final_wf <- workflow() %>%
+  add_recipe(rf_recipe) %>%
+  add_model(final_rf)
+
+final_res <- final_wf %>%
+  last_fit(split)
+
+final_res %>%
+  collect_metrics()
+
+# Adding in some diagnostic plots for model evaulation
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_pred = exp(`.pred`)-0.001) %>%
+  bind_cols(te_data) %>%
+  ggplot(aes(x = `time_to_col...57`, y = time_pred)) +
+  geom_point(alpha = 0.4) +
+  geom_abline()
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  pull(time_minus_prediction) %>% 
+  summary()
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  pull(time_minus_prediction) %>% 
+  exp(.) %>%
+  summary()
+  
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  ggplot(aes(x = time_minus_prediction)) +
+  geom_density()
+
+final_res %>%
+  collect_predictions() %>%
+  dplyr::mutate(time_minus_prediction = time_to_col - .pred) %>%
+  filter(time_to_col > 0) %>%
+  ggplot(aes(x = exp(time_to_col),y = time_minus_prediction)) +
+  geom_point() +
+  geom_smooth()
+
+```
+
+On average the actual time values are above the predictions by 3 frames. One frame above for the median. This is most likely due to the lack of features that need to be incorporated that would complicate the tackling process, like number of people in between the tackler and the ball carrier, and if they are engaged in a block or not. Both of these factors are unaccounted for and would increase the time to be able to tackle. 
+After adding them in the predictions are about the same, residual plots look decent. Residuals are normally distributed around ~ 0.1. Residuals vs fitted values show a slight positive trend which isn't great but not bad. Continuing on with these modeling results. 
+
+Current metrics: rmse 1.77 rsq 0.36
+Only 1 sample per play: rmse 1.98 rsq = 0.31
+
+### Last value prediction or average value prediction
+
+For each play there are sequential tracking points. For the predictions, we can evaluate the difference in the average prediction for the entire sequence of points, or the average of the points where time to collision is greater than one to see which produces the best results
+
+``` {r}
+ind <- final_res %>%
+  collect_predictions() %>%
+  pull(.row)
+
+comp_play_error <- split$data %>%
+  dplyr::slice(ind) %>%
+  dplyr::select(-time_to_col) %>%
+  bind_cols(
+    final_res %>%
+      collect_predictions() %>%
+      dplyr::select(time_to_col, .pred)
+  ) %>%
+  filter(time_to_col > 0, .pred > 0) %>%
+  dplyr::group_by(unq_play_id) %>%
+  dplyr::summarise(
+    avg_rmse =  mean(sqrt((time_to_col - .pred) ^2)), 
+    last_rmse = sqrt((last(time_to_col) - last(.pred)) ^2)
+  ) %>%
+  ungroup() %>%
+  pivot_longer(
+    cols = c("avg_rmse", "last_rmse")
+  )
+
+comp_play_error %>%
+  ggplot(aes(x = name, y = value)) +
+  geom_boxplot()
+```
+
+It is very clear that the average error for each play is better than taking the error from the last data point of the play. When making the predictions for the players going forward, we will model all the data points for each play and use the average of the predictions for each play to determine when the collision will occur. This could cause issues if players are predicted to make a tackle early. Can't use average because situations may change during the play. In the first example, the average expected frame is less than the actual frame where the collision occurred. Implying the defender should have been able to make a tackle before the tackle actually occurred. Model may be missing additional features as well as far as the direction of the players. USE THE PREDICTION AT THE LAST FRAME. WILL MAKE DATA CLEANING AND DATA SETS EASIER AND SMALLER
+
+### Making predictions for every defender, every play
+
+Build out the dataset of the carrier paired with each defender that is not the tackler. This is where the predictions for time to collision will be made. 
+
+``` {r}
+
+tack_gr_each_play <- tackles %>%
+  filter(tackle == 1 | assist == 1 | forcedFumble == 1) %>%
+  dplyr::group_by(gameId,playId) %>%
+  dplyr::summarise(tack_all_ids = list(nflId)) %>%
+  ungroup()
+
+car_def_pairs_each_week <- function(week) {
+  stt <- Sys.time()
+  trackfile <- paste0("tracking_week_",week,".csv")
+  track1 <- read_csv(trackfile) %>% clean_names()
+  
+  tackle_involved_id <- tackles %>% pull(nflId)
+  
+  allnontack <- track1 %>% 
+    inner_join(plays %>% dplyr::select(gameId,playId,defensiveTeam), 
+                   by = c("game_id" = "gameId","play_id" = "playId")) %>%
+    inner_join(tack_gr_each_play,
+               by = c("game_id" = "gameId","play_id" = "playId")) %>%
+    filter(display_name != "football",
+           club == defensiveTeam
+           ) %>%
+    dplyr::group_by(game_id,play_id) %>%
+    filter(!(nfl_id %in% tack_all_ids)) %>%
+    inner_join(players %>% dplyr::select(nfl_id, height_in,weight))
+  
+  allcar <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","nfl_id" = "ballCarrierId")) %>%
+        inner_join(players %>% dplyr::select(nfl_id, height_in,weight)) %>%
+        setNames(paste0("car_",names(.))) 
+  
+  alloff <- track1 %>%
+        inner_join(plays %>% dplyr::select(gameId,playId,possessionTeam,ballCarrierId), 
+                   by = c("game_id" = "gameId","play_id" = "playId","club" = "possessionTeam")) %>%
+    filter(nfl_id != ballCarrierId) %>%
+        setNames(paste0("off_",names(.))) 
+  
+  count_off_between <- function(game,play,frame,tack_x,tack_y,bc_x,bc_y) {
+    m = (tack_y - bc_y) / (tack_x - bc_x)
+    int = bc_y - m*bc_x
+    l_int = int - 1
+    u_int = int + 1
+    
+    pl_between_df <- alloff %>% 
+      filter(off_game_id == game, off_play_id == play, off_frame_id == frame) %>%
+      dplyr::mutate(calc_upper_y = m*off_x+u_int,
+                    calc_lower_y = m*off_x+l_int) %>%
+      filter(off_y <= calc_upper_y, off_y >= calc_lower_y)
+    
+    return(nrow(pl_between_df))
+      
+      # return the length of the data frame representing the number of people in between
+  }
+  
+  closest_off_pl_dist <- function(game,play,frame,tack_x,tack_y) {
+    clos <- alloff %>% 
+      filter(off_game_id == game, off_play_id == play, off_frame_id == frame) %>%
+      dplyr::mutate(dist_to_off = sqrt(((off_x-tack_x)^2) +  ((off_y-tack_y)^2))) %>%
+      pull(dist_to_off) %>%
+      min(., na.rm = TRUE)
+    
+    return(clos)
+  }
+  
+  pair <- inner_join(allcar,allnontack, 
+                                by = c("car_game_id" = "game_id",
+                                       "car_play_id" = "play_id",
+                                       "car_frame_id" = "frame_id")) %>%
+    dplyr::group_by(car_game_id,car_play_id,nfl_id) %>%
+    dplyr::mutate(start = pick(event,car_frame_id) %>% filter(event %in% start_triggers) %>% 
+                    pull(car_frame_id) %>% min(),
+                  alt_start = pick(event,car_frame_id) %>% filter(event  == "ball_snap") %>% 
+                    pull(car_frame_id) %>% min(),
+                  start = ifelse(start == Inf,alt_start,start),
+                  end = pick(event,car_frame_id) %>% filter(event == "tackle") %>% # changing this from end trigger to tackle in hopes for improvement
+                    pull(car_frame_id) %>% min(),
+                  dist_to_car = sqrt(((x-car_x)^2) +  ((y-car_y)^2)),
+                  vel_to_car = dist_to_car - lag(dist_to_car), # in meters per hz
+                  acc_to_car = vel_to_car - lag(vel_to_car), # in meters per hz^2
+                  jerk_to_car = acc_to_car - lag(acc_to_car), # in meters per hz^3
+                  rel_velo = s - car_s,
+                  rel_o = o - car_o,
+                  rel_dir = dir - car_dir,
+                  start_dist = pick(start,dist_to_car) %>% filter(car_frame_id == start) %>% pull(dist_to_car),
+                  timer = car_frame_id - start,
+                  time_to_col_orig = end - car_frame_id,
+                  time_to_col = log(time_to_col_orig+0.001),
+                  start_frame = ifelse(timer == 0,TRUE,FALSE),
+                  unq_play_id = paste0(car_game_id,"-",car_play_id)
+                  ) %>%
+    ungroup() %>%
+    dplyr::select(-alt_start) %>%
+    filter(car_frame_id >= start,car_frame_id <= end) #%>%
+    # dplyr::mutate(off_pl_btw = pmap_dbl(list(car_game_id, car_play_id,car_frame_id,x,y,car_x,car_y),
+    #                                     count_off_between),
+    #               min_off_dist = pmap_dbl(list(car_game_id,car_play_id, car_frame_id, x, y),
+    #                                       closest_off_pl_dist)
+    #               )
+  
+  # p <- predict(final_res %>% extract_fit_parsnip(),
+  #              pair) %>%
+  #   rename(pred_ttc = `.pred`) %>%
+  #   dplyr::mutate(pred_frames = exp(pred_ttc)-0.001,
+  #                 pred_s = pred_frames / 10)
+  # 
+  # pairwpred <- pair %>% bind_cols(p) %>%
+  #   dplyr::mutate(exp_frame_of_collision = timer + pred_frames)
+  
+  pairwpred <- pair
+  ste <- Sys.time()
+  print(ste-stt)
+  return(pairwpred)
+
+}
+
+carrier_nontackler <- 1:9 %>% map_dfr(car_def_pairs_each_week) # trying for one week just to see how it works
+
+
+```
+ 
+ Calculations seem to be working correctly. Add in model prediction inside the function. Easier to predict in weekly batches.
+ 
+ 
+### Some summary statistics on the predictions
+ 
+``` {r}
+ carrier_nontackler %>% pull(pred_frames) %>% summary()
+
+carrier_nontackler %>%
+  ggplot() +
+  geom_density(aes(x = pred_frames), fill = "red", alpha = 0.2) +
+  geom_density(data = carrier_tackler, aes(x = time_to_col), fill = "blue", alpha = 0.2)
+```
+Looking at the carrier and nontackler pairs that were predicted from the model, we can see that the overall shape of the distribution is extremely similar to the time to collision from the actual carrier and tackler pairs. This bodes well for the predictive ability of the model and adds confidence to the proof of concept of the approach taken. 
+
+### Finding the next tackler data for each play
+
+``` {r}
+next_hyp_tackler <- carrier_nontackler %>%
+  dplyr::group_by(unq_play_id) %>%
+  filter(pred_frames == min(pred_frames)) %>%
+  ungroup() %>%
+  setNames(paste0("hyp_",names(.)))
+```
+
+The next big step is to project where the running back will be using the seconds after the tackle from the next hypothetical tackler. The carrier data up to the point of contact will be taken and the X yardage (yards down the field) will be estimated with a physics function incorporating speed, velocity and jerk x component only. 
+
+### Projecting hypothetical yards
+
+``` {r}
+# building a gam model and returning prediction based on data
+carr_traj <- function(subset_df) {
+  # subset df should consist of car_x, timer and predicted frames
+  mod <- gam(car_x ~ s(timer, bs = "cr", k = 5), data = subset_df)
+  summary(mod)
+  pred_x <- predict.gam(mod, newdata = data.frame(timer = subset_df$hyp_exp_frame_of_collision[1]))
+  return(pred_x)
+}
+
+carrier_tackler %>%
+  dplyr::group_by(unq_play_id) %>%
+  summarise(datapoints = n()) %>%
+  ungroup() %>%
+  summary()
+
+# putting together carrier and tackler with next hypothetical tackler
+# taking out plays with very few points, unable to calculate trajectory, at least half second
+rb_other_traj <- carrier_tackler %>%
+  left_join(next_hyp_tackler, by = c("unq_play_id" = "hyp_unq_play_id")) %>%
+  # dplyr::filter(unq_play_id == "2022090800-101") %>%
+  # dplyr::select(car_x,timer,hyp_exp_frame_of_collision)
+  dplyr::mutate(x_dir_v = car_x - lag(car_x),
+                x_dir_a = x_dir_v - lag(x_dir_v),
+                x_dir_j = x_dir_a - lag(x_dir_a)) %>%
+  dplyr::group_by(unq_play_id) %>%
+  filter(n() > 5) %>%
+  dplyr::mutate(x_from_traj = carr_traj(pick(car_x,timer,hyp_exp_frame_of_collision)) )
+
+yds_saved_db <- rb_other_traj %>%
+  dplyr::group_by(unq_play_id) %>%
+  filter(timer == max(timer)) %>% # last row for each play
+  ungroup() %>%
+  dplyr::mutate(yds_saved = abs(x_from_traj - car_x))
+
+yds_saved_db %>%
+  ggplot(aes(x = yds_saved)) +
+  geom_density()
+  
+carrier_tackler %>%
+  dplyr::filter(unq_play_id == "2022090800-101") %>%
+  ggplot(aes(x = timer, y = car_x)) +
+  geom_point() +
+  geom_smooth(method = "gam")
+```
+
+By modeling only off of only plays where a tackle was made, might have biased the results towards always being able to make a tackle. The yards saved variables seem to be very small (based on predicted time to collision from the model). I would assume that there would be some plays where the amount of yards saved would be very large (touchdown saving plays). 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Projecting for the carrier based on the projected frames
+
+``` {r}
+# Take the nearest time to collision as the next tackler
+p <- predict(final_res %>% extract_fit_parsnip(), 
+        carrier_nontackler %>%
+          mutate(time_to_col = log(time_to_col+0.001)) %>%
+          filter(!is.na(jerk_to_car))
+)
+
+carrier_nontackler %>%
+  mutate(time_to_col = log(time_to_col+0.001)) %>%
+  filter(!is.na(jerk_to_car)) %>%
+  bind_cols(p) %>% 
+  mutate(frames = exp(.pred)-0.001, 
+         secs = frames / 10,
+         exp_frame_of_collision = timer + frames) %>%
+  View()
+
+carrier_nontackler %>%
+  mutate(time_to_col = log(time_to_col+0.001)) %>%
+  filter(!is.na(jerk_to_car)) %>%
+  bind_cols(p) %>% 
+  mutate(frames = exp(.pred)-0.001, 
+         secs = frames / 10,
+         exp_frame_of_collision = timer + frames) %>%
+  group_by(car_game_id,car_play_id) %>%
+  filter(frames == min(frames)) %>%
+  summarise(closestdef = min(dist_to_car),
+            player = first(display_name),
+            addframes = last(frames)) %>%
+  View()
+
+carrier_nontackler %>%
+  mutate(time_to_col = log(time_to_col+0.001)) %>%
+  filter(!is.na(jerk_to_car)) %>%
+  bind_cols(p) %>% 
+  mutate(frames = exp(.pred)-0.001, 
+         secs = frames / 10,
+         exp_frame_of_collision = timer + frames) %>%
+  group_by(car_game_id,car_play_id) %>%
+  filter(frames == min(frames)) %>%
+  summarise(closestdef = min(dist_to_car),
+            player = first(display_name),
+            addframes = last(frames)) %>%
+  ggplot(aes(x = closestdef, y = addframes)) +
+  geom_point() + geom_smooth(method = "lm") +
+  ggpubr::stat_cor()
+
+```
+

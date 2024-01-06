@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<style>body{background-color:white;}</style>
+<script src="lib/core-js-2.5.3/shim.min.js"></script>
+<script src="lib/react-18.2.0/react.min.js"></script>
+<script src="lib/react-18.2.0/react-dom.min.js"></script>
+<script src="lib/reactwidget-1.0.0/react-tools.js"></script>
+<script src="lib/htmlwidgets-1.6.2/htmlwidgets.js"></script>
+<link href="lib/reactable-0.4.4/reactable.css" rel="stylesheet" />
+<script src="lib/reactable-binding-0.4.4/reactable.js"></script>
+
+</head>
+<body>
+<div id="jcxtppfdoi" class=".gt_table" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+  <style>#jcxtppfdoi table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#jcxtppfdoi thead, #jcxtppfdoi tbody, #jcxtppfdoi tfoot, #jcxtppfdoi tr, #jcxtppfdoi td, #jcxtppfdoi th {
+  border-style: none;
+}
+
+#jcxtppfdoi p {
+  margin: 0;
+  padding: 0;
+}
+
+#jcxtppfdoi .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#jcxtppfdoi .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#jcxtppfdoi .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#jcxtppfdoi .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#jcxtppfdoi .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#jcxtppfdoi .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#jcxtppfdoi .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#jcxtppfdoi .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#jcxtppfdoi .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#jcxtppfdoi .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#jcxtppfdoi .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#jcxtppfdoi .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#jcxtppfdoi .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#jcxtppfdoi .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#jcxtppfdoi .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jcxtppfdoi .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#jcxtppfdoi .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#jcxtppfdoi .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#jcxtppfdoi .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jcxtppfdoi .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#jcxtppfdoi .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jcxtppfdoi .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#jcxtppfdoi .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jcxtppfdoi .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#jcxtppfdoi .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jcxtppfdoi .gt_left {
+  text-align: left;
+}
+
+#jcxtppfdoi .gt_center {
+  text-align: center;
+}
+
+#jcxtppfdoi .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#jcxtppfdoi .gt_font_normal {
+  font-weight: normal;
+}
+
+#jcxtppfdoi .gt_font_bold {
+  font-weight: bold;
+}
+
+#jcxtppfdoi .gt_font_italic {
+  font-style: italic;
+}
+
+#jcxtppfdoi .gt_super {
+  font-size: 65%;
+}
+
+#jcxtppfdoi .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#jcxtppfdoi .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#jcxtppfdoi .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#jcxtppfdoi .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#jcxtppfdoi .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#jcxtppfdoi .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#jcxtppfdoi .gt_indent_5 {
+  text-indent: 25px;
+}
+</style>
+  <div style="font-family:system-ui, &#39;Segoe UI&#39;, Roboto, Helvetica, Arial, sans-serif;border-top-style:solid;border-top-width:2px;border-top-color:#D3D3D3;padding-bottom:8px;">
+    <div class="gt_heading gt_title gt_font_normal" style="text-size:bigger;">2022 Week 9 Yards Saved By Team</div>
+    <div class="gt_heading gt_subtitle gt_bottom_border"></div>
+  </div>
+  <div id="jcxtppfdoi" class="reactable html-widget " style="color: #333;width:auto;height:auto;"></div>
+  <script type="application/json" data-for="jcxtppfdoi">{"x":{"tag":{"name":"Reactable","attribs":{"data":{"car_game_id":["2022110300","2022110300","2022110600","2022110600","2022110601","2022110601","2022110602","2022110602","2022110603","2022110603","2022110604","2022110604","2022110605","2022110605","2022110606","2022110606","2022110607","2022110607","2022110608","2022110608","2022110609","2022110609","2022110610","2022110610","2022110700","2022110700"],"team_logo_wikipedia":["https://upload.wikimedia.org/wikipedia/en/thumb/2/28/Houston_Texans_logo.svg/100px-Houston_Texans_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Philadelphia_Eagles_logo.svg/100px-Philadelphia_Eagles_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Atlanta_Falcons_logo.svg/192px-Atlanta_Falcons_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/7/72/NFL_Chargers_logo.svg/100px-NFL_Chargers_logo.svg.png","https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Chicago_Bears_logo.svg/100px-Chicago_Bears_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Miami_Dolphins_logo.svg/100px-Miami_Dolphins_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/1/1c/Carolina_Panthers_logo.svg/100px-Carolina_Panthers_logo.svg.png","https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Cincinnati_Bengals_logo.svg/100px-Cincinnati_Bengals_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/7/71/Detroit_Lions_logo.svg/100px-Detroit_Lions_logo.svg.png","https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Green_Bay_Packers_logo.svg/100px-Green_Bay_Packers_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/7/74/Jacksonville_Jaguars_logo.svg/100px-Jacksonville_Jaguars_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/4/48/Las_Vegas_Raiders_logo.svg/100px-Las_Vegas_Raiders_logo.svg.png","https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Indianapolis_Colts_logo.svg/100px-Indianapolis_Colts_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/100px-New_England_Patriots_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/7/77/Buffalo_Bills_logo.svg/189px-Buffalo_Bills_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/6/6b/New_York_Jets_logo.svg/100px-New_York_Jets_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/4/48/Minnesota_Vikings_logo.svg/98px-Minnesota_Vikings_logo.svg.png","https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Washington_commanders.svg/100px-Washington_commanders.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/7/72/Arizona_Cardinals_logo.svg/179px-Arizona_Cardinals_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Seattle_Seahawks_logo.svg/100px-Seattle_Seahawks_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/8/8a/Los_Angeles_Rams_logo.svg/100px-Los_Angeles_Rams_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/Tampa_Bay_Buccaneers_logo.svg/100px-Tampa_Bay_Buccaneers_logo.svg.png","https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Kansas_City_Chiefs_logo.svg/100px-Kansas_City_Chiefs_logo.svg.png","https://github.com/nflverse/nflfastR-data/raw/master/titans.png","https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Baltimore_Ravens_logo.svg/193px-Baltimore_Ravens_logo.svg.png","https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/New_Orleans_Saints_logo.svg/98px-New_Orleans_Saints_logo.svg.png"],"defensiveTeam":["HOU","PHI","ATL","LAC","CHI","MIA","CAR","CIN","DET","GB","JAX","LV","IND","NE","BUF","NYJ","MIN","WAS","ARI","SEA","LA","TB","KC","TEN","BAL","NO"],"tackles":[42,35,37,37,31,44,44,21,35,33,29,41,41,31,31,27,37,37,46,34,41,25,23,49,28,41],"total_yds_saved":[40.52,25.77,20.85,33.38,26.94,42.42,52.56,17.77,28.36,32.98,19.56,39.04,26,19.5,30.6,22.36,29.23,32.62,47.46,30.1,33.7,13.12,25.23,48.26,28.09,48.39],"yds_saved_per_tackle":[0.96,0.74,0.56,0.9,0.87,0.96,1.19,0.85,0.81,1,0.67,0.95,0.63,0.63,0.99,0.83,0.79,0.88,1.03,0.89,0.82,0.52,1.1,0.98,1,1.18]},"columns":[{"id":"car_game_id","name":"Game ID","type":"character","style":"function(rowInfo, colInfo) {\nconst rowIndex = rowInfo.index + 1\nif (colInfo.id === 'tackles' & rowIndex === 1) {\n  return { backgroundColor: '#9CCE64', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 2) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 3) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 4) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 5) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 6) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 7) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 8) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 9) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 10) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 11) {\n  return { backgroundColor: '#EFADD4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 12) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 13) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 14) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 15) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 16) {\n  return { backgroundColor: '#E180B4', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 17) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 18) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 19) {\n  return { backgroundColor: '#519523', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 20) {\n  return { backgroundColor: '#F9EFF4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 21) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 22) {\n  return { backgroundColor: '#D14B92', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 23) {\n  return { backgroundColor: '#B51470', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 24) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 25) {\n  return { backgroundColor: '#E897C4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 26) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 1) {\n  return { backgroundColor: '#BBE28A', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 2) {\n  return { backgroundColor: '#F4BFDE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 3) {\n  return { backgroundColor: '#DD74AC', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 4) {\n  return { backgroundColor: '#F5F7F2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 5) {\n  return { backgroundColor: '#F7CBE5', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 6) {\n  return { backgroundColor: '#A0D169', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 8) {\n  return { backgroundColor: '#CA3386', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 9) {\n  return { backgroundColor: '#FBDAEC', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 10) {\n  return { backgroundColor: '#F6F7F6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 11) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 12) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 13) {\n  return { backgroundColor: '#F4C1E0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 14) {\n  return { backgroundColor: '#D55A9B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 15) {\n  return { backgroundColor: '#FBEAF2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 16) {\n  return { backgroundColor: '#E58DBD', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 17) {\n  return { backgroundColor: '#FDE2F0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 18) {\n  return { backgroundColor: '#F7F6F7', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 19) {\n  return { backgroundColor: '#5C9E2B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 20) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 21) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 23) {\n  return { backgroundColor: '#F2B9DB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 24) {\n  return { backgroundColor: '#529624', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 25) {\n  return { backgroundColor: '#FBD7EB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 26) {\n  return { backgroundColor: '#509423', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 1) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 2) {\n  return { backgroundColor: '#F5C2E0', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 3) {\n  return { backgroundColor: '#AE116B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 4) {\n  return { backgroundColor: '#ECF6DD', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 5) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 6) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 8) {\n  return { backgroundColor: '#F8F5F6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 9) {\n  return { backgroundColor: '#FBE8F2', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 10) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 11) {\n  return { backgroundColor: '#E386B8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 12) {\n  return { backgroundColor: '#D3EDB1', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 13) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 14) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 15) {\n  return { backgroundColor: '#B7E085', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 16) {\n  return { backgroundColor: '#F9EEF4', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 17) {\n  return { backgroundColor: '#FDE1EF', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 18) {\n  return { backgroundColor: '#F1F6E8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 19) {\n  return { backgroundColor: '#95CA5C', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 20) {\n  return { backgroundColor: '#EEF6E3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 21) {\n  return { backgroundColor: '#FAEBF3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 23) {\n  return { backgroundColor: '#5EA02C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 24) {\n  return { backgroundColor: '#BEE490', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 25) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 26) {\n  return { backgroundColor: '#2D6B1A', color: '#FFFFFF' }\n}\n\n}","cell":["2022110300","2022110300","2022110600","2022110600","2022110601","2022110601","2022110602","2022110602","2022110603","2022110603","2022110604","2022110604","2022110605","2022110605","2022110606","2022110606","2022110607","2022110607","2022110608","2022110608","2022110609","2022110609","2022110610","2022110610","2022110700","2022110700"],"html":true,"width":150,"align":"center","headerStyle":{"font-weight":"normal"}},{"id":"team_logo_wikipedia","name":"Logo","type":"character","style":"function(rowInfo, colInfo) {\nconst rowIndex = rowInfo.index + 1\nif (colInfo.id === 'tackles' & rowIndex === 1) {\n  return { backgroundColor: '#9CCE64', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 2) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 3) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 4) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 5) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 6) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 7) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 8) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 9) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 10) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 11) {\n  return { backgroundColor: '#EFADD4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 12) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 13) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 14) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 15) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 16) {\n  return { backgroundColor: '#E180B4', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 17) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 18) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 19) {\n  return { backgroundColor: '#519523', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 20) {\n  return { backgroundColor: '#F9EFF4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 21) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 22) {\n  return { backgroundColor: '#D14B92', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 23) {\n  return { backgroundColor: '#B51470', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 24) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 25) {\n  return { backgroundColor: '#E897C4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 26) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 1) {\n  return { backgroundColor: '#BBE28A', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 2) {\n  return { backgroundColor: '#F4BFDE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 3) {\n  return { backgroundColor: '#DD74AC', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 4) {\n  return { backgroundColor: '#F5F7F2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 5) {\n  return { backgroundColor: '#F7CBE5', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 6) {\n  return { backgroundColor: '#A0D169', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 8) {\n  return { backgroundColor: '#CA3386', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 9) {\n  return { backgroundColor: '#FBDAEC', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 10) {\n  return { backgroundColor: '#F6F7F6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 11) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 12) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 13) {\n  return { backgroundColor: '#F4C1E0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 14) {\n  return { backgroundColor: '#D55A9B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 15) {\n  return { backgroundColor: '#FBEAF2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 16) {\n  return { backgroundColor: '#E58DBD', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 17) {\n  return { backgroundColor: '#FDE2F0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 18) {\n  return { backgroundColor: '#F7F6F7', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 19) {\n  return { backgroundColor: '#5C9E2B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 20) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 21) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 23) {\n  return { backgroundColor: '#F2B9DB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 24) {\n  return { backgroundColor: '#529624', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 25) {\n  return { backgroundColor: '#FBD7EB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 26) {\n  return { backgroundColor: '#509423', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 1) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 2) {\n  return { backgroundColor: '#F5C2E0', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 3) {\n  return { backgroundColor: '#AE116B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 4) {\n  return { backgroundColor: '#ECF6DD', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 5) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 6) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 8) {\n  return { backgroundColor: '#F8F5F6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 9) {\n  return { backgroundColor: '#FBE8F2', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 10) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 11) {\n  return { backgroundColor: '#E386B8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 12) {\n  return { backgroundColor: '#D3EDB1', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 13) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 14) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 15) {\n  return { backgroundColor: '#B7E085', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 16) {\n  return { backgroundColor: '#F9EEF4', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 17) {\n  return { backgroundColor: '#FDE1EF', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 18) {\n  return { backgroundColor: '#F1F6E8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 19) {\n  return { backgroundColor: '#95CA5C', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 20) {\n  return { backgroundColor: '#EEF6E3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 21) {\n  return { backgroundColor: '#FAEBF3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 23) {\n  return { backgroundColor: '#5EA02C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 24) {\n  return { backgroundColor: '#BEE490', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 25) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 26) {\n  return { backgroundColor: '#2D6B1A', color: '#FFFFFF' }\n}\n\n}","cell":["<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/2/28/Houston_Texans_logo.svg/100px-Houston_Texans_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Philadelphia_Eagles_logo.svg/100px-Philadelphia_Eagles_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Atlanta_Falcons_logo.svg/192px-Atlanta_Falcons_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/7/72/NFL_Chargers_logo.svg/100px-NFL_Chargers_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Chicago_Bears_logo.svg/100px-Chicago_Bears_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Miami_Dolphins_logo.svg/100px-Miami_Dolphins_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/1/1c/Carolina_Panthers_logo.svg/100px-Carolina_Panthers_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Cincinnati_Bengals_logo.svg/100px-Cincinnati_Bengals_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/7/71/Detroit_Lions_logo.svg/100px-Detroit_Lions_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Green_Bay_Packers_logo.svg/100px-Green_Bay_Packers_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/7/74/Jacksonville_Jaguars_logo.svg/100px-Jacksonville_Jaguars_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/4/48/Las_Vegas_Raiders_logo.svg/100px-Las_Vegas_Raiders_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Indianapolis_Colts_logo.svg/100px-Indianapolis_Colts_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/b/b9/New_England_Patriots_logo.svg/100px-New_England_Patriots_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/7/77/Buffalo_Bills_logo.svg/189px-Buffalo_Bills_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/6/6b/New_York_Jets_logo.svg/100px-New_York_Jets_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/4/48/Minnesota_Vikings_logo.svg/98px-Minnesota_Vikings_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Washington_commanders.svg/100px-Washington_commanders.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/7/72/Arizona_Cardinals_logo.svg/179px-Arizona_Cardinals_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/8/8e/Seattle_Seahawks_logo.svg/100px-Seattle_Seahawks_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/8/8a/Los_Angeles_Rams_logo.svg/100px-Los_Angeles_Rams_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/Tampa_Bay_Buccaneers_logo.svg/100px-Tampa_Bay_Buccaneers_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Kansas_City_Chiefs_logo.svg/100px-Kansas_City_Chiefs_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://github.com/nflverse/nflfastR-data/raw/master/titans.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/en/thumb/1/16/Baltimore_Ravens_logo.svg/193px-Baltimore_Ravens_logo.svg.png\" style=\"height:30px;\">","<img src=\"https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/New_Orleans_Saints_logo.svg/98px-New_Orleans_Saints_logo.svg.png\" style=\"height:30px;\">"],"html":true,"width":80,"align":"center","headerStyle":{"font-weight":"normal"}},{"id":"defensiveTeam","name":"Team","type":"character","style":"function(rowInfo, colInfo) {\nconst rowIndex = rowInfo.index + 1\nif (colInfo.id === 'tackles' & rowIndex === 1) {\n  return { backgroundColor: '#9CCE64', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 2) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 3) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 4) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 5) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 6) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 7) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 8) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 9) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 10) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 11) {\n  return { backgroundColor: '#EFADD4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 12) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 13) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 14) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 15) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 16) {\n  return { backgroundColor: '#E180B4', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 17) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 18) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 19) {\n  return { backgroundColor: '#519523', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 20) {\n  return { backgroundColor: '#F9EFF4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 21) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 22) {\n  return { backgroundColor: '#D14B92', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 23) {\n  return { backgroundColor: '#B51470', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 24) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 25) {\n  return { backgroundColor: '#E897C4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 26) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 1) {\n  return { backgroundColor: '#BBE28A', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 2) {\n  return { backgroundColor: '#F4BFDE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 3) {\n  return { backgroundColor: '#DD74AC', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 4) {\n  return { backgroundColor: '#F5F7F2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 5) {\n  return { backgroundColor: '#F7CBE5', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 6) {\n  return { backgroundColor: '#A0D169', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 8) {\n  return { backgroundColor: '#CA3386', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 9) {\n  return { backgroundColor: '#FBDAEC', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 10) {\n  return { backgroundColor: '#F6F7F6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 11) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 12) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 13) {\n  return { backgroundColor: '#F4C1E0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 14) {\n  return { backgroundColor: '#D55A9B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 15) {\n  return { backgroundColor: '#FBEAF2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 16) {\n  return { backgroundColor: '#E58DBD', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 17) {\n  return { backgroundColor: '#FDE2F0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 18) {\n  return { backgroundColor: '#F7F6F7', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 19) {\n  return { backgroundColor: '#5C9E2B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 20) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 21) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 23) {\n  return { backgroundColor: '#F2B9DB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 24) {\n  return { backgroundColor: '#529624', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 25) {\n  return { backgroundColor: '#FBD7EB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 26) {\n  return { backgroundColor: '#509423', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 1) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 2) {\n  return { backgroundColor: '#F5C2E0', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 3) {\n  return { backgroundColor: '#AE116B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 4) {\n  return { backgroundColor: '#ECF6DD', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 5) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 6) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 8) {\n  return { backgroundColor: '#F8F5F6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 9) {\n  return { backgroundColor: '#FBE8F2', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 10) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 11) {\n  return { backgroundColor: '#E386B8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 12) {\n  return { backgroundColor: '#D3EDB1', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 13) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 14) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 15) {\n  return { backgroundColor: '#B7E085', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 16) {\n  return { backgroundColor: '#F9EEF4', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 17) {\n  return { backgroundColor: '#FDE1EF', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 18) {\n  return { backgroundColor: '#F1F6E8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 19) {\n  return { backgroundColor: '#95CA5C', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 20) {\n  return { backgroundColor: '#EEF6E3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 21) {\n  return { backgroundColor: '#FAEBF3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 23) {\n  return { backgroundColor: '#5EA02C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 24) {\n  return { backgroundColor: '#BEE490', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 25) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 26) {\n  return { backgroundColor: '#2D6B1A', color: '#FFFFFF' }\n}\n\n}","cell":["HOU","PHI","ATL","LAC","CHI","MIA","CAR","CIN","DET","GB","JAX","LV","IND","NE","BUF","NYJ","MIN","WAS","ARI","SEA","LA","TB","KC","TEN","BAL","NO"],"html":true,"width":80,"align":"center","headerStyle":{"font-weight":"normal"}},{"id":"tackles","name":"Tackles","type":"numeric","style":"function(rowInfo, colInfo) {\nconst rowIndex = rowInfo.index + 1\nif (colInfo.id === 'tackles' & rowIndex === 1) {\n  return { backgroundColor: '#9CCE64', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 2) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 3) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 4) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 5) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 6) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 7) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 8) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 9) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 10) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 11) {\n  return { backgroundColor: '#EFADD4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 12) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 13) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 14) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 15) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 16) {\n  return { backgroundColor: '#E180B4', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 17) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 18) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 19) {\n  return { backgroundColor: '#519523', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 20) {\n  return { backgroundColor: '#F9EFF4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 21) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 22) {\n  return { backgroundColor: '#D14B92', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 23) {\n  return { backgroundColor: '#B51470', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 24) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 25) {\n  return { backgroundColor: '#E897C4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 26) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 1) {\n  return { backgroundColor: '#BBE28A', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 2) {\n  return { backgroundColor: '#F4BFDE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 3) {\n  return { backgroundColor: '#DD74AC', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 4) {\n  return { backgroundColor: '#F5F7F2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 5) {\n  return { backgroundColor: '#F7CBE5', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 6) {\n  return { backgroundColor: '#A0D169', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 8) {\n  return { backgroundColor: '#CA3386', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 9) {\n  return { backgroundColor: '#FBDAEC', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 10) {\n  return { backgroundColor: '#F6F7F6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 11) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 12) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 13) {\n  return { backgroundColor: '#F4C1E0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 14) {\n  return { backgroundColor: '#D55A9B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 15) {\n  return { backgroundColor: '#FBEAF2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 16) {\n  return { backgroundColor: '#E58DBD', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 17) {\n  return { backgroundColor: '#FDE2F0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 18) {\n  return { backgroundColor: '#F7F6F7', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 19) {\n  return { backgroundColor: '#5C9E2B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 20) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 21) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 23) {\n  return { backgroundColor: '#F2B9DB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 24) {\n  return { backgroundColor: '#529624', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 25) {\n  return { backgroundColor: '#FBD7EB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 26) {\n  return { backgroundColor: '#509423', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 1) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 2) {\n  return { backgroundColor: '#F5C2E0', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 3) {\n  return { backgroundColor: '#AE116B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 4) {\n  return { backgroundColor: '#ECF6DD', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 5) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 6) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 8) {\n  return { backgroundColor: '#F8F5F6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 9) {\n  return { backgroundColor: '#FBE8F2', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 10) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 11) {\n  return { backgroundColor: '#E386B8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 12) {\n  return { backgroundColor: '#D3EDB1', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 13) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 14) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 15) {\n  return { backgroundColor: '#B7E085', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 16) {\n  return { backgroundColor: '#F9EEF4', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 17) {\n  return { backgroundColor: '#FDE1EF', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 18) {\n  return { backgroundColor: '#F1F6E8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 19) {\n  return { backgroundColor: '#95CA5C', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 20) {\n  return { backgroundColor: '#EEF6E3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 21) {\n  return { backgroundColor: '#FAEBF3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 23) {\n  return { backgroundColor: '#5EA02C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 24) {\n  return { backgroundColor: '#BEE490', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 25) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 26) {\n  return { backgroundColor: '#2D6B1A', color: '#FFFFFF' }\n}\n\n}","cell":["42","35","37","37","31","44","44","21","35","33","29","41","41","31","31","27","37","37","46","34","41","25","23","49","28","41"],"html":true,"align":"center","headerStyle":{"font-weight":"normal"}},{"id":"total_yds_saved","name":"Total Yards Saved","type":"numeric","style":"function(rowInfo, colInfo) {\nconst rowIndex = rowInfo.index + 1\nif (colInfo.id === 'tackles' & rowIndex === 1) {\n  return { backgroundColor: '#9CCE64', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 2) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 3) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 4) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 5) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 6) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 7) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 8) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 9) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 10) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 11) {\n  return { backgroundColor: '#EFADD4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 12) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 13) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 14) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 15) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 16) {\n  return { backgroundColor: '#E180B4', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 17) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 18) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 19) {\n  return { backgroundColor: '#519523', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 20) {\n  return { backgroundColor: '#F9EFF4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 21) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 22) {\n  return { backgroundColor: '#D14B92', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 23) {\n  return { backgroundColor: '#B51470', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 24) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 25) {\n  return { backgroundColor: '#E897C4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 26) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 1) {\n  return { backgroundColor: '#BBE28A', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 2) {\n  return { backgroundColor: '#F4BFDE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 3) {\n  return { backgroundColor: '#DD74AC', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 4) {\n  return { backgroundColor: '#F5F7F2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 5) {\n  return { backgroundColor: '#F7CBE5', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 6) {\n  return { backgroundColor: '#A0D169', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 8) {\n  return { backgroundColor: '#CA3386', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 9) {\n  return { backgroundColor: '#FBDAEC', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 10) {\n  return { backgroundColor: '#F6F7F6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 11) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 12) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 13) {\n  return { backgroundColor: '#F4C1E0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 14) {\n  return { backgroundColor: '#D55A9B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 15) {\n  return { backgroundColor: '#FBEAF2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 16) {\n  return { backgroundColor: '#E58DBD', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 17) {\n  return { backgroundColor: '#FDE2F0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 18) {\n  return { backgroundColor: '#F7F6F7', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 19) {\n  return { backgroundColor: '#5C9E2B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 20) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 21) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 23) {\n  return { backgroundColor: '#F2B9DB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 24) {\n  return { backgroundColor: '#529624', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 25) {\n  return { backgroundColor: '#FBD7EB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 26) {\n  return { backgroundColor: '#509423', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 1) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 2) {\n  return { backgroundColor: '#F5C2E0', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 3) {\n  return { backgroundColor: '#AE116B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 4) {\n  return { backgroundColor: '#ECF6DD', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 5) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 6) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 8) {\n  return { backgroundColor: '#F8F5F6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 9) {\n  return { backgroundColor: '#FBE8F2', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 10) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 11) {\n  return { backgroundColor: '#E386B8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 12) {\n  return { backgroundColor: '#D3EDB1', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 13) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 14) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 15) {\n  return { backgroundColor: '#B7E085', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 16) {\n  return { backgroundColor: '#F9EEF4', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 17) {\n  return { backgroundColor: '#FDE1EF', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 18) {\n  return { backgroundColor: '#F1F6E8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 19) {\n  return { backgroundColor: '#95CA5C', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 20) {\n  return { backgroundColor: '#EEF6E3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 21) {\n  return { backgroundColor: '#FAEBF3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 23) {\n  return { backgroundColor: '#5EA02C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 24) {\n  return { backgroundColor: '#BEE490', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 25) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 26) {\n  return { backgroundColor: '#2D6B1A', color: '#FFFFFF' }\n}\n\n}","cell":["40.52","25.77","20.85","33.38","26.94","42.42","52.56","17.77","28.36","32.98","19.56","39.04","26.00","19.50","30.60","22.36","29.23","32.62","47.46","30.10","33.70","13.12","25.23","48.26","28.09","48.39"],"html":true,"align":"center","headerStyle":{"font-weight":"normal"}},{"id":"yds_saved_per_tackle","name":"Yards Saved Per Tackle","type":"numeric","style":"function(rowInfo, colInfo) {\nconst rowIndex = rowInfo.index + 1\nif (colInfo.id === 'tackles' & rowIndex === 1) {\n  return { backgroundColor: '#9CCE64', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 2) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 3) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 4) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 5) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 6) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 7) {\n  return { backgroundColor: '#74B33A', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 8) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 9) {\n  return { backgroundColor: '#F7F7F7', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 10) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 11) {\n  return { backgroundColor: '#EFADD4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 12) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 13) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 14) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 15) {\n  return { backgroundColor: '#F8CEE6', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 16) {\n  return { backgroundColor: '#E180B4', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 17) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 18) {\n  return { backgroundColor: '#EBF6DB', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 19) {\n  return { backgroundColor: '#519523', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 20) {\n  return { backgroundColor: '#F9EFF4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 21) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 22) {\n  return { backgroundColor: '#D14B92', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 23) {\n  return { backgroundColor: '#B51470', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 24) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 25) {\n  return { backgroundColor: '#E897C4', color: '#000000' }\n}\n\nif (colInfo.id === 'tackles' & rowIndex === 26) {\n  return { backgroundColor: '#B0DC7C', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 1) {\n  return { backgroundColor: '#BBE28A', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 2) {\n  return { backgroundColor: '#F4BFDE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 3) {\n  return { backgroundColor: '#DD74AC', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 4) {\n  return { backgroundColor: '#F5F7F2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 5) {\n  return { backgroundColor: '#F7CBE5', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 6) {\n  return { backgroundColor: '#A0D169', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 8) {\n  return { backgroundColor: '#CA3386', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 9) {\n  return { backgroundColor: '#FBDAEC', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 10) {\n  return { backgroundColor: '#F6F7F6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 11) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 12) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 13) {\n  return { backgroundColor: '#F4C1E0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 14) {\n  return { backgroundColor: '#D55A9B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 15) {\n  return { backgroundColor: '#FBEAF2', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 16) {\n  return { backgroundColor: '#E58DBD', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 17) {\n  return { backgroundColor: '#FDE2F0', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 18) {\n  return { backgroundColor: '#F7F6F7', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 19) {\n  return { backgroundColor: '#5C9E2B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 20) {\n  return { backgroundColor: '#FBE7F1', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 21) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 23) {\n  return { backgroundColor: '#F2B9DB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 24) {\n  return { backgroundColor: '#529624', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 25) {\n  return { backgroundColor: '#FBD7EB', color: '#000000' }\n}\n\nif (colInfo.id === 'total_yds_saved' & rowIndex === 26) {\n  return { backgroundColor: '#509423', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 1) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 2) {\n  return { backgroundColor: '#F5C2E0', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 3) {\n  return { backgroundColor: '#AE116B', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 4) {\n  return { backgroundColor: '#ECF6DD', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 5) {\n  return { backgroundColor: '#F3F7EE', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 6) {\n  return { backgroundColor: '#CCEAA6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 7) {\n  return { backgroundColor: '#276419', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 8) {\n  return { backgroundColor: '#F8F5F6', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 9) {\n  return { backgroundColor: '#FBE8F2', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 10) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 11) {\n  return { backgroundColor: '#E386B8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 12) {\n  return { backgroundColor: '#D3EDB1', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 13) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 14) {\n  return { backgroundColor: '#D65C9C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 15) {\n  return { backgroundColor: '#B7E085', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 16) {\n  return { backgroundColor: '#F9EEF4', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 17) {\n  return { backgroundColor: '#FDE1EF', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 18) {\n  return { backgroundColor: '#F1F6E8', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 19) {\n  return { backgroundColor: '#95CA5C', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 20) {\n  return { backgroundColor: '#EEF6E3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 21) {\n  return { backgroundColor: '#FAEBF3', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 22) {\n  return { backgroundColor: '#8E0152', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 23) {\n  return { backgroundColor: '#5EA02C', color: '#FFFFFF' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 24) {\n  return { backgroundColor: '#BEE490', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 25) {\n  return { backgroundColor: '#AFDB7B', color: '#000000' }\n}\n\nif (colInfo.id === 'yds_saved_per_tackle' & rowIndex === 26) {\n  return { backgroundColor: '#2D6B1A', color: '#FFFFFF' }\n}\n\n}","cell":["0.96","0.74","0.56","0.90","0.87","0.96","1.19","0.85","0.81","1.00","0.67","0.95","0.63","0.63","0.99","0.83","0.79","0.88","1.03","0.89","0.82","0.52","1.10","0.98","1.00","1.18"],"html":true,"align":"center","headerStyle":{"font-weight":"normal"}}],"resizable":true,"filterable":true,"searchable":true,"defaultPageSize":32,"showPageSizeOptions":true,"pageSizeOptions":[10,25,50,100],"paginationType":"numbers","showPagination":true,"showPageInfo":true,"minRows":1,"highlight":true,"nowrap":true,"showSortable":true,"height":"auto","theme":{"color":"#333333","backgroundColor":"#FFFFFF","stripedColor":"rgba(128,128,128,0.05)","style":{"fontFamily":"system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"},"headerStyle":{"borderTopStyle":"solid","borderTopWidth":"2px","borderTopColor":"#D3D3D3","borderBottomStyle":"solid","borderBottomWidth":"2px","borderBottomColor":"#D3D3D3"}},"elementId":"jcxtppfdoi","dataKey":"4ebaa7257e9f6d2b8d07e86d864d884d"},"children":[]},"class":"reactR_markup"},"evals":["tag.attribs.columns.0.style","tag.attribs.columns.1.style","tag.attribs.columns.2.style","tag.attribs.columns.3.style","tag.attribs.columns.4.style","tag.attribs.columns.5.style"],"jsHooks":[]}</script>
+</div>
+</body>
+</html>
